@@ -1,0 +1,260 @@
+{
+  "nodes": [
+    {
+      "id": "node_5e9bd51d-7d30-47db-a941-75fcbad9bd10",
+      "type": "custom",
+      "initialized": false,
+      "position": {
+        "x": -80.93080158417979,
+        "y": 183.21856679158094
+      },
+      "data": {
+        "inputs": [],
+        "outputs": ["_Data"],
+        "nodeName": "start",
+        "title": "Start",
+        "configData": {
+          "label": "Start"
+        },
+        "legacyType": "start",
+        "legacyName": "start",
+        "unavailable": false,
+        "twoColumn": true,
+        "nodeType": "start"
+      },
+      "style": {
+        "width": 250
+      },
+      "group": "Basic"
+    },
+    {
+      "id": "node_da01509a-b1dd-454e-9d44-b56b0f6103da",
+      "type": "custom",
+      "initialized": false,
+      "position": {
+        "x": 1213.7987892015706,
+        "y": 162.04002833938472
+      },
+      "data": {
+        "inputs": ["_Data"],
+        "outputs": [],
+        "nodeName": "end",
+        "title": "End",
+        "configData": {
+          "label": "End"
+        },
+        "legacyType": "end",
+        "legacyName": "end",
+        "unavailable": false,
+        "twoColumn": true,
+        "nodeType": "end"
+      },
+      "style": {
+        "width": 250
+      },
+      "group": "Basic"
+    },
+    {
+      "id": "node_43473574-8415-4868-96cc-e80853254ac0",
+      "type": "custom",
+      "initialized": false,
+      "position": {
+        "x": 578.7972743049703,
+        "y": 176.16181112612998
+      },
+      "data": {
+        "inputs": ["inp"],
+        "outputs": ["out"],
+        "nodeName": "logic#node_43473574-8415-4868-96cc-e80853254ac0",
+        "title": "Logic",
+        "configData": {
+          "label": "Logic",
+          "notes": null,
+          "incomingSockets": "inp",
+          "outgoingSockets": "out",
+          "logic": "out=inp.value"
+        },
+        "legacyType": "logic",
+        "legacyName": "logic",
+        "unavailable": false,
+        "twoColumn": true,
+        "configSchema": [
+          {
+            "label": "Label",
+            "name": "label",
+            "type": "string"
+          },
+          {
+            "label": "Notes",
+            "name": "notes",
+            "type": "string",
+            "rows": 5
+          },
+          {
+            "label": "Incoming Sockets",
+            "name": "incomingSockets",
+            "type": "string",
+            "rows": 2
+          },
+          {
+            "label": "Outgoing Sockets",
+            "name": "outgoingSockets",
+            "type": "string",
+            "rows": 2
+          },
+          {
+            "label": "Logic",
+            "name": "logic",
+            "type": "editor"
+          }
+        ],
+        "nodeType": "logic"
+      },
+      "style": {
+        "width": 250
+      },
+      "group": "Basic"
+    },
+    {
+      "id": "node_6266f80b-1ad4-458f-bb01-99628278be3e",
+      "type": "custom",
+      "initialized": false,
+      "position": {
+        "x": 245.52042326533757,
+        "y": 169.592100338737
+      },
+      "data": {
+        "inputs": ["_Data"],
+        "outputs": ["_Response", "_Error"],
+        "nodeName": "Core:HTTPRequest",
+        "title": "Core:HTTPRequest",
+        "configData": {
+          "label": "Core:HTTPRequest",
+          "notes": null,
+          "mode": "Simple",
+          "endpoint": "https://api.chucknorris.io/jokes/random",
+          "method": "get",
+          "headers": null,
+          "queryStrings": null,
+          "body": null,
+          "typeOfResponse": "JSON As Map",
+          "proxy": null,
+          "proxyPort": null,
+          "proxyUser": "admin",
+          "proxyPassword": "changeme",
+          "basicAuthUser": null,
+          "basicAuthPassword": null,
+          "keyStore": null,
+          "keyStorePassword": null,
+          "trustStore": null,
+          "trustStorePassword": null
+        },
+        "legacyType": "workflow",
+        "legacyName": "Core:HTTPRequest",
+        "unavailable": false,
+        "twoColumn": true,
+        "action": "httpRequest",
+        "nodeType": "workflow"
+      },
+      "style": {
+        "width": 250
+      },
+      "group": "Outbound"
+    },
+    {
+      "id": "node_ec065c50-6bc4-4bcf-a0c2-8e6ebbec66bd",
+      "type": "custom",
+      "initialized": false,
+      "position": {
+        "x": 916.3326712794291,
+        "y": 160.150727182359
+      },
+      "data": {
+        "inputs": ["_In"],
+        "outputs": ["_Out"],
+        "nodeName": "Core:Log",
+        "title": "Core:Log",
+        "configData": {
+          "label": "Core:Log",
+          "notes": null,
+          "message": "result: "
+        },
+        "legacyType": "workflow",
+        "legacyName": "Core:Log",
+        "unavailable": false,
+        "twoColumn": true,
+        "action": "log",
+        "nodeType": "workflow"
+      },
+      "style": {
+        "width": 250
+      },
+      "group": "System"
+    }
+  ],
+  "edges": [
+    {
+      "id": "vueflow__edge-node_5e9bd51d-7d30-47db-a941-75fcbad9bd10_Data#undefinedsource-node_6266f80b-1ad4-458f-bb01-99628278be3e_Data#undefinedtarget",
+      "type": "custom",
+      "source": "node_5e9bd51d-7d30-47db-a941-75fcbad9bd10",
+      "target": "node_6266f80b-1ad4-458f-bb01-99628278be3e",
+      "sourceHandle": "_Data#undefinedsource",
+      "targetHandle": "_Data#undefinedtarget",
+      "data": {},
+      "label": "",
+      "sourceX": 173.23574055014828,
+      "sourceY": 244.05191392634134,
+      "targetX": 241.35377310911107,
+      "targetY": 230.4254474734974
+    },
+    {
+      "id": "vueflow__edge-node_43473574-8415-4868-96cc-e80853254ac0out#undefinedsource-node_ec065c50-6bc4-4bcf-a0c2-8e6ebbec66bd_In#undefinedtarget",
+      "type": "custom",
+      "source": "node_43473574-8415-4868-96cc-e80853254ac0",
+      "target": "node_ec065c50-6bc4-4bcf-a0c2-8e6ebbec66bd",
+      "sourceHandle": "out#undefinedsource",
+      "targetHandle": "_In#undefinedtarget",
+      "data": {},
+      "label": "",
+      "sourceX": 832.9638702464977,
+      "sourceY": 236.99512238942415,
+      "targetX": 912.165913508804,
+      "targetY": 220.9840743171194
+    },
+    {
+      "id": "vueflow__edge-node_6266f80b-1ad4-458f-bb01-99628278be3e_Response#undefinedsource-node_43473574-8415-4868-96cc-e80853254ac0inp#undefinedtarget",
+      "type": "custom",
+      "source": "node_6266f80b-1ad4-458f-bb01-99628278be3e",
+      "target": "node_43473574-8415-4868-96cc-e80853254ac0",
+      "sourceHandle": "_Response#undefinedsource",
+      "targetHandle": "inp#undefinedtarget",
+      "data": {},
+      "label": "",
+      "sourceX": 499.68698333539874,
+      "sourceY": 230.4254474734974,
+      "targetX": 574.6307317631424,
+      "targetY": 236.99512238942415
+    },
+    {
+      "id": "vueflow__edge-node_ec065c50-6bc4-4bcf-a0c2-8e6ebbec66bd_Out#undefinedsource-node_da01509a-b1dd-454e-9d44-b56b0f6103da_Data#undefinedtarget",
+      "type": "custom",
+      "source": "node_ec065c50-6bc4-4bcf-a0c2-8e6ebbec66bd",
+      "target": "node_da01509a-b1dd-454e-9d44-b56b0f6103da",
+      "sourceHandle": "_Out#undefinedsource",
+      "targetHandle": "_Data#undefinedtarget",
+      "data": {},
+      "label": "",
+      "sourceX": 1170.499195478024,
+      "sourceY": 220.9840743171194,
+      "targetX": 1209.631959688013,
+      "targetY": 222.87337547414512
+    }
+  ],
+  "position": [-199.6326908439798, 14.401868841252167],
+  "zoom": 0.850747672942373,
+  "viewport": {
+    "x": -199.6326908439798,
+    "y": 14.401868841252167,
+    "zoom": 0.850747672942373
+  }
+}

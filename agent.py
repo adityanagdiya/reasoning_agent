@@ -64,7 +64,7 @@ Use these definitions to construct the `data` and `configData` for each node cor
     *   Use "" as a fallback if unsure.
 
 11. **Parallel Execution Order**:
-    *   If a single node has MULTIPLE outgoing edges (parallel execution), you MUST define an execution order.
+    *   If a single node has MULTIPLE outgoing edges (parallel execution), and <<<"there is need to define an execution order">>> then you MUST define an execution order.
     *   Add a `data` field to the edge: `"data": {{"order": 1}}`, `"data": {{"order": 2}}`, etc.
     *   Example: Node A connects to Node B and Node C.
         - Edge A->B: `"data": {{"order": 1}}`

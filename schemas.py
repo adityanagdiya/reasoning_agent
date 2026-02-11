@@ -122,7 +122,7 @@ class FlowEdge(BaseModel):
     target: str = Field(..., description="Target node id")
     sourceHandle: str = Field(..., description="e.g., 'out#undefinedsource'")
     targetHandle: str = Field(..., description="e.g., 'inp#undefinedtarget'")
-    # execution order...
+    data: Optional[Dict[str, Any]] = Field(default_factory=dict, description="Edge metadata, e.g. {'order': 1} for execution order")
 
 class Flow(BaseModel):
     nodes: List[FlowNode]

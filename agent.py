@@ -221,9 +221,20 @@ def post_process_flow(flow_dict):
 if __name__ == "__main__":
     import sys
     # task = "Create a simple flow that starts, logs 'Hello World', checks if a variable 'x' is greater than 10, and ends."
-    # task = "Create a flow that fetches a joke from the Chuck Norris API (REST interface) and then simply write the logic to only get the joke from the response json."
+   
+    # task = "Create a flow that fetches a joke from the Chuck Norris API (REST interface) and then simply write the logic to only get the joke from the response json." 
+    # task = """  Create a flow that fetches a joke from the Chuck Norris API (REST interface), 
+    #             then log the whole json response. 
+    #             then simply write the logic to only get the joke from the previous log output (use .value) 
+    #             and log this too again."""
+    
     # task = "Create a flow that fetches a joke from the Chuck Norris API (REST interface) and then write the logic to only get the joke from the response json (by .value) . and at the end log that joke."
+    # task = """  Create a flow that fetches a 2 jokes from the Chuck Norris API (2 different API calls in parallel), 
+    #             and then simply write a single logic to concatinate those two jokes (use .value to get only the joke from the response json) . 
+    #             at the end log this final concatinated joke."""
+
     task = """  Create a flow that fetches a 2 jokes from the Chuck Norris API (2 different API calls in parallel), 
+                then separately log the whole json response of both the API calls. 
                 and then simply write a single logic to concatinate those two jokes (use .value to get only the joke from the response json) . 
                 at the end log this final concatinated joke."""
 

@@ -3,6 +3,7 @@ import yaml
 import json
 import uuid
 from agno.agent import Agent #, RunResponse
+from agno.models.ollama import Ollama
 from schemas import Flow, FinalFlow
 
 # Load Node Definitions
@@ -75,12 +76,11 @@ Use these definitions to construct the `data` and `configData` for each node cor
 """
 
 
-from agno.models.ollama import Ollama
 
 # Initialize Agent
 # Using the specific Ollama model requested by the user
-
-which_model = "gpt-oss-120b-long-context:latest"
+which_model = "qwen3-coder-next-128k-custom:latest"
+# which_model = "gpt-oss-120b-long-context:latest"
 # which_model = "gpt-oss-20b-long-context"
 
 agent = Agent(
@@ -223,7 +223,8 @@ if __name__ == "__main__":
     import sys
     # task = "Create a simple flow that starts, logs 'Hello World', checks if a variable 'x' is greater than 10, and ends."
    
-    # task = "Create a flow that fetches a joke from the Chuck Norris API (REST interface) and then simply write the logic to only get the joke from the response json." 
+    task = "Create a flow that fetches a joke from the Chuck Norris API (REST interface) and then simply write the logic to only get the joke from the response json." 
+
     # task = """  Create a flow that fetches a joke from the Chuck Norris API (REST interface), 
     #             then log the whole json response. 
     #             then simply write the logic to only get the joke from the previous log output (use .value) 
@@ -234,10 +235,10 @@ if __name__ == "__main__":
     #             and then simply write a single logic to concatinate those two jokes (use .value to get only the joke from the response json) . 
     #             at the end log this final concatinated joke."""
 
-    task = """  Create a flow that fetches a 2 jokes from the Chuck Norris API (2 different API calls in parallel), 
-                then separately log the whole json response of both the API calls. 
-                and then simply write a single logic to concatinate those two jokes (use .value to get only the joke from the response json) . 
-                at the end log this final concatinated joke."""
+    # task = """  Create a flow that fetches a 2 jokes from the Chuck Norris API (2 different API calls in parallel), 
+    #             then separately log the whole json response of both the API calls. 
+    #             and then simply write a single logic to concatinate those two jokes (use .value to get only the joke from the response json) . 
+    #             at the end log this final concatinated joke."""
 
     if len(sys.argv) > 1:
         task = sys.argv[1]
@@ -291,7 +292,7 @@ if __name__ == "__main__":
             # Save to file for inspection
             import datetime
             timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-            filename = f"generated_flow_{which_model.split('-long')[0]}_{timestamp}.json"
+            filename = f"generated_flow_{which_model.split(':')[0]}_{timestamp}.json"
             
             with open(filename, "w") as f:
                 json.dump(final_json_dict, f, indent=3)

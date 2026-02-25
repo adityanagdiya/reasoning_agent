@@ -55,7 +55,7 @@ Nodes:
 
   Logic:
     description: |
-      Executes custom Groovy  logic.
+      Executes custom Groovy or Python logic.
 
       This node allows for complex data transformation or custom operations
       by executing a script. It supports dynamic input and output sockets.
@@ -69,11 +69,12 @@ Nodes:
       Config:
         label (string): A descriptive label for this logic node.
         notes (string): Additional documentation or notes about the script's logic.
-        incomingSockets (string): Comma-separated list of input socket names(e.g. inp1,inp2,...).
+        incomingSockets (string): Comma-separated list of input socket names.
         outgoingSockets (string): Comma-separated list of output socket names.
-        logic (string): The script to execute in Groovy.(e.g. out=inp1+inp2)
+        logic (string): The script to execute. Starts with `#python` for Python,
+          otherwise defaults to Groovy.
     group: Basic
-    action: ""
+    action: ''
     inputs:
       inp: any
     outputs:
@@ -99,6 +100,7 @@ Nodes:
       - label: Logic
         name: logic
         type: editor
+
 
   Core:Log:
     description: |

@@ -25,13 +25,9 @@ Use these definitions to construct the `data` and `configData` for each node cor
 
 
 ### Rules
-1. **Node Selection**: Use ONLY the provided nodes.
+1. **Node Selection**: Use ONLY the provided nodes in : Available Node Definitions YAML
     *   'Start' & 'End' nodes are MANDATORY for every flow.
-    *   Use 'Core:HTTPRequest' for API calls.
-    *   Use 'Core:Log' for logging.
-    *   Use 'Logic' node only if complex transformation is strictly needed.
-    *   Use 'Core:If' for branching.
-
+   
 2.  **Strict Schema Compliance**: The output must validly parse into the `Flow` Pydantic model.
 3.  **Node IDs**: Generate 4 digit unique IDs for nodes and then prefixed with 'dndnode_'(e.g.: dndnode_<1111>).
 5.  **Logical Flow**: Ensure the nodes are connected in a logical order described by the user (or implied).
@@ -50,22 +46,8 @@ Use these definitions to construct the `data` and `configData` for each node cor
         - `targetHandle` = `_In#undefinedtarget`
     *   Ensure the SocketName used exists in the corresponding node's definitions.
 
-9.  **Group**: Each node should have a `group` field. Use the following categories:
-    *   "Basic" for Start, End, and Logic nodes.
-    *   "System" for Core:Log.
-    *   "Outbound" for Core:HTTPRequest.
-    *   "Logic" for Core:If.
-    *   Use "Basic" as a fallback if unsure.
-    
-10. action field: 
-    *   For Start node: "" (empty string)
-    *   For End node: "" (empty string)
-    *   For Logic node: "" (empty string)
-    *   For Core:Log node: "log"
-    *   For Core:HTTPRequest node: "httpRequest"
-    *   Use "" as a fallback if unsure.
 
-11. **Parallel Execution Order**:
+9. **Parallel Execution Order**:
     *   If a single node has MULTIPLE outgoing edges (parallel execution), and <<<"if there is a need to define an execution order for parallel execution">>> then you MUST define an execution order.
     *   Add a `data` field to the edge: `"data": {{"order": 1}}`, `"data": {{"order": 2}}`, etc.
     *   Example: Node A connects to Node B and Node C.
@@ -73,14 +55,21 @@ Use these definitions to construct the `data` and `configData` for each node cor
         - Edge A->C: `"data": {{"order": 2}}`
     *   This is CRITICAL for parallel flows.
 
+
+10. **Python Code in Logic Node**: 
+    *   If logic needs to be writte in python code, then you MUST write the logic in the `logic` field.
+    *   use in_sockets[<name_of_input_socket>] to access the input socket and out_sockets[<name_of_output_socket>] to access the output socket.
+    *   - Example: `#python\nout_sockets["out"]="hi"+in_sockets["inp"]`
+        - Example: `#python\nout_sockets["out"]=in_sockets["inp"].value`
+        - Example: `#python\nout_sockets["out"]=in_sockets["inp1"]+in_sockets["inp2"]`
+        - Example: `#python\nout_sockets["out"]=len(in_sockets["inp"].value)`
+
 """
-
-
 
 # Initialize Agent
 # Using the specific Ollama model requested by the user
-which_model = "qwen3-coder-next-128k-custom:latest"
-# which_model = "gpt-oss-120b-long-context:latest"
+# which_model = "qwen3-coder-next-128k-custom:latest"
+which_model = "gpt-oss-120b-long-context:latest"
 # which_model = "gpt-oss-20b-long-context"
 
 agent = Agent(
@@ -91,6 +80,13 @@ agent = Agent(
     structured_outputs=True,
     debug_mode=True
 )
+
+def _normalize_config_value(v):
+    """Return None for empty or empty-JSON-string values; otherwise return the value."""
+    if v == "" or v == "{}":
+        return None
+    return v
+
 
 def post_process_flow(flow_dict):
     """
@@ -154,6 +150,14 @@ def post_process_flow(flow_dict):
             # Keep original name for Core nodes
             pass
         
+        # Normalize configData: empty string "" and "{}" -> null
+        raw_data = node.get("data", {})
+        config_data_raw = raw_data.get("configData")
+        if isinstance(config_data_raw, dict):
+            config_data_normalized = {k: _normalize_config_value(v) for k, v in config_data_raw.items()}
+        else:
+            config_data_normalized = {}
+        
         # Construct the enriched node
         new_node = {
             "id": new_id,
@@ -161,7 +165,8 @@ def post_process_flow(flow_dict):
             "initialized": False,
             "position": {"x": 0, "y": 0},
             "data": {
-                **node.get("data", {}),
+                **raw_data,
+                "configData": config_data_normalized,
                 "title": title,
                 "legacyType": legacy_type,
                 "legacyName": legacy_name,
@@ -222,8 +227,11 @@ def post_process_flow(flow_dict):
 if __name__ == "__main__":
     import sys
     # task = "Create a simple flow that starts, logs 'Hello World', checks if a variable 'x' is greater than 10, and ends."
-   
-    task = "Create a flow that fetches a joke from the Chuck Norris API (REST interface) and then simply write the logic to only get the joke from the response json." 
+    
+    # task= "create a flow for logging 'hello world' ."
+
+    task = """Create a flow that fetches a joke from the Chuck Norris API 
+    and then extract only the joke from the response and then log this joke."""
 
     # task = """  Create a flow that fetches a joke from the Chuck Norris API (REST interface), 
     #             then log the whole json response. 
@@ -239,6 +247,10 @@ if __name__ == "__main__":
     #             then separately log the whole json response of both the API calls. 
     #             and then simply write a single logic to concatinate those two jokes (use .value to get only the joke from the response json) . 
     #             at the end log this final concatinated joke."""
+
+    # task = """Create a flow that fetches a joke from the Chuck Norris API (REST interface) 
+    # and then simply write the logic to get the length of the joke from the response json(use .value to get only the joke from the response json). 
+    # and then if the length is greater than 100, then log 'Joke is too long' otherwise log 'Joke is short'.""" 
 
     if len(sys.argv) > 1:
         task = sys.argv[1]

@@ -1,7 +1,7 @@
 {
   "nodes": [
     {
-      "id": "dndnode_e25feb70-f566-424d-a942-a4fc6ef2a506",
+      "id": "dndnode_831a08de-6817-486c-9f2c-72d1639ccb6d",
       "type": "custom",
       "initialized": false,
       "position": {
@@ -53,7 +53,7 @@
       "group": "Basic"
     },
     {
-      "id": "dndnode_e2d95e73-8821-4aa3-9d3c-66f04b1f54e4",
+      "id": "dndnode_a776bcf5-95d3-484c-9252-c0289bc92fed",
       "type": "custom",
       "initialized": false,
       "position": {
@@ -81,7 +81,7 @@
           "body": "",
           "typeOfResponse": "JSON As Map",
           "proxy": "",
-          "proxyPort": null,
+          "proxyPort": 0,
           "proxyUser": "",
           "proxyPassword": "",
           "basicAuthUser": "",
@@ -105,7 +105,59 @@
       "group": "Outbound"
     },
     {
-      "id": "dndnode_128f35f1-a789-4c8e-95f2-a95de380845e",
+      "id": "dndnode_040aa6ea-c3af-4ffc-8fd3-a68bc31ce669",
+      "type": "custom",
+      "initialized": false,
+      "position": {
+        "x": 0.0,
+        "y": 0.0
+      },
+      "data": {
+        "inputs": ["_In"],
+        "outputs": ["_Out"],
+        "nodeName": "Core:Log",
+        "title": "Core:Log",
+        "configData": {
+          "label": "Log Full Response",
+          "notes": null,
+          "incomingSockets": null,
+          "outgoingSockets": null,
+          "logic": null,
+          "message": "Full response",
+          "expression": null,
+          "mode": null,
+          "endpoint": null,
+          "method": null,
+          "headers": null,
+          "queryStrings": null,
+          "body": null,
+          "typeOfResponse": null,
+          "proxy": null,
+          "proxyPort": null,
+          "proxyUser": null,
+          "proxyPassword": null,
+          "basicAuthUser": null,
+          "basicAuthPassword": null,
+          "keyStore": null,
+          "keyStorePassword": null,
+          "trustStore": null,
+          "trustStorePassword": null
+        },
+        "legacyType": "workflow",
+        "legacyName": "Core:Log",
+        "unavailable": false,
+        "twoColumn": true,
+        "nodeType": "workflow",
+        "configSchema": null,
+        "action": "log"
+      },
+      "style": {
+        "width": 250
+      },
+      "group": "System"
+    },
+    {
+      "id": "dndnode_51092b46-4a5a-4184-bd62-d55e7c9528b7",
       "type": "custom",
       "initialized": false,
       "position": {
@@ -115,14 +167,14 @@
       "data": {
         "inputs": ["inp"],
         "outputs": ["out"],
-        "nodeName": "logic#dndnode_128f35f1-a789-4c8e-95f2-a95de380845e",
+        "nodeName": "logic#dndnode_51092b46-4a5a-4184-bd62-d55e7c9528b7",
         "title": "Logic",
         "configData": {
           "label": "Extract Joke",
           "notes": "",
           "incomingSockets": "inp",
           "outgoingSockets": "out",
-          "logic": "def json = new groovy.json.JsonSlurper().parseText(inp);\nout = json.value",
+          "logic": "out=inp.value",
           "message": null,
           "expression": null,
           "mode": null,
@@ -157,7 +209,7 @@
       "group": "Basic"
     },
     {
-      "id": "dndnode_2f521d58-bd9c-4023-afd4-caf46b9e597e",
+      "id": "dndnode_88682dfc-a7b9-427e-9471-f626ebe9d03d",
       "type": "custom",
       "initialized": false,
       "position": {
@@ -175,7 +227,7 @@
           "incomingSockets": null,
           "outgoingSockets": null,
           "logic": null,
-          "message": "Joke fetched",
+          "message": "Joke",
           "expression": null,
           "mode": null,
           "endpoint": null,
@@ -209,7 +261,7 @@
       "group": "System"
     },
     {
-      "id": "dndnode_53d70b4e-9ba2-47e8-a1ce-04658c2ca738",
+      "id": "dndnode_9f408a38-8d55-425e-840a-b89980fb8647",
       "type": "custom",
       "initialized": false,
       "position": {
@@ -263,10 +315,10 @@
   ],
   "edges": [
     {
-      "id": "edge_dndnode_e25feb70-f566-424d-a942-a4fc6ef2a506_dndnode_e2d95e73-8821-4aa3-9d3c-66f04b1f54e4",
+      "id": "edge_dndnode_831a08de-6817-486c-9f2c-72d1639ccb6d_dndnode_a776bcf5-95d3-484c-9252-c0289bc92fed",
       "type": "custom",
-      "source": "dndnode_e25feb70-f566-424d-a942-a4fc6ef2a506",
-      "target": "dndnode_e2d95e73-8821-4aa3-9d3c-66f04b1f54e4",
+      "source": "dndnode_831a08de-6817-486c-9f2c-72d1639ccb6d",
+      "target": "dndnode_a776bcf5-95d3-484c-9252-c0289bc92fed",
       "sourceHandle": "_Data#undefinedsource",
       "targetHandle": "_Data#undefinedtarget",
       "data": {},
@@ -277,11 +329,25 @@
       "targetY": 0.0
     },
     {
-      "id": "edge_dndnode_e2d95e73-8821-4aa3-9d3c-66f04b1f54e4_dndnode_128f35f1-a789-4c8e-95f2-a95de380845e",
+      "id": "edge_dndnode_a776bcf5-95d3-484c-9252-c0289bc92fed_dndnode_040aa6ea-c3af-4ffc-8fd3-a68bc31ce669",
       "type": "custom",
-      "source": "dndnode_e2d95e73-8821-4aa3-9d3c-66f04b1f54e4",
-      "target": "dndnode_128f35f1-a789-4c8e-95f2-a95de380845e",
+      "source": "dndnode_a776bcf5-95d3-484c-9252-c0289bc92fed",
+      "target": "dndnode_040aa6ea-c3af-4ffc-8fd3-a68bc31ce669",
       "sourceHandle": "_Response#undefinedsource",
+      "targetHandle": "_In#undefinedtarget",
+      "data": {},
+      "label": "",
+      "sourceX": 0.0,
+      "sourceY": 0.0,
+      "targetX": 0.0,
+      "targetY": 0.0
+    },
+    {
+      "id": "edge_dndnode_040aa6ea-c3af-4ffc-8fd3-a68bc31ce669_dndnode_51092b46-4a5a-4184-bd62-d55e7c9528b7",
+      "type": "custom",
+      "source": "dndnode_040aa6ea-c3af-4ffc-8fd3-a68bc31ce669",
+      "target": "dndnode_51092b46-4a5a-4184-bd62-d55e7c9528b7",
+      "sourceHandle": "_Out#undefinedsource",
       "targetHandle": "inp#undefinedtarget",
       "data": {},
       "label": "",
@@ -291,10 +357,10 @@
       "targetY": 0.0
     },
     {
-      "id": "edge_dndnode_128f35f1-a789-4c8e-95f2-a95de380845e_dndnode_2f521d58-bd9c-4023-afd4-caf46b9e597e",
+      "id": "edge_dndnode_51092b46-4a5a-4184-bd62-d55e7c9528b7_dndnode_88682dfc-a7b9-427e-9471-f626ebe9d03d",
       "type": "custom",
-      "source": "dndnode_128f35f1-a789-4c8e-95f2-a95de380845e",
-      "target": "dndnode_2f521d58-bd9c-4023-afd4-caf46b9e597e",
+      "source": "dndnode_51092b46-4a5a-4184-bd62-d55e7c9528b7",
+      "target": "dndnode_88682dfc-a7b9-427e-9471-f626ebe9d03d",
       "sourceHandle": "out#undefinedsource",
       "targetHandle": "_In#undefinedtarget",
       "data": {},
@@ -305,10 +371,10 @@
       "targetY": 0.0
     },
     {
-      "id": "edge_dndnode_2f521d58-bd9c-4023-afd4-caf46b9e597e_dndnode_53d70b4e-9ba2-47e8-a1ce-04658c2ca738",
+      "id": "edge_dndnode_88682dfc-a7b9-427e-9471-f626ebe9d03d_dndnode_9f408a38-8d55-425e-840a-b89980fb8647",
       "type": "custom",
-      "source": "dndnode_2f521d58-bd9c-4023-afd4-caf46b9e597e",
-      "target": "dndnode_53d70b4e-9ba2-47e8-a1ce-04658c2ca738",
+      "source": "dndnode_88682dfc-a7b9-427e-9471-f626ebe9d03d",
+      "target": "dndnode_9f408a38-8d55-425e-840a-b89980fb8647",
       "sourceHandle": "_Out#undefinedsource",
       "targetHandle": "_Data#undefinedtarget",
       "data": {},

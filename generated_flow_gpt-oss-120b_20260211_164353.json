@@ -1,7 +1,7 @@
 {
   "nodes": [
     {
-      "id": "dndnode_b20c29ac-44b4-4034-ada8-88851db5b21f",
+      "id": "dndnode_4617b536-4971-4ebf-8883-183ee07d5d3b",
       "type": "custom",
       "initialized": false,
       "position": {
@@ -14,8 +14,8 @@
         "nodeName": "start",
         "title": "Start",
         "configData": {
-          "label": "Chuck Norris Joke Flow",
-          "notes": "Entry point of the flow",
+          "label": "Start Flow",
+          "notes": "",
           "incomingSockets": null,
           "outgoingSockets": null,
           "logic": null,
@@ -53,7 +53,7 @@
       "group": "Basic"
     },
     {
-      "id": "dndnode_3295c629-2148-4903-8f76-e66cf57e55c2",
+      "id": "dndnode_b1b54298-345f-47d8-bca8-ed143d3f2d15",
       "type": "custom",
       "initialized": false,
       "position": {
@@ -66,7 +66,7 @@
         "nodeName": "Core:HTTPRequest",
         "title": "Core:HTTPRequest",
         "configData": {
-          "label": "Get Chuck Norris Joke",
+          "label": "Fetch Joke",
           "notes": null,
           "incomingSockets": null,
           "outgoingSockets": null,
@@ -105,7 +105,7 @@
       "group": "Outbound"
     },
     {
-      "id": "dndnode_ebd65609-c7a6-4abf-8b41-2aea0729c0af",
+      "id": "dndnode_7921b18a-46a5-49d5-a81e-4387227bd7e7",
       "type": "custom",
       "initialized": false,
       "position": {
@@ -115,14 +115,14 @@
       "data": {
         "inputs": ["inp"],
         "outputs": ["out"],
-        "nodeName": "logic#dndnode_ebd65609-c7a6-4abf-8b41-2aea0729c0af",
+        "nodeName": "logic#dndnode_7921b18a-46a5-49d5-a81e-4387227bd7e7",
         "title": "Logic",
         "configData": {
           "label": "Extract Joke",
           "notes": "",
           "incomingSockets": "inp",
           "outgoingSockets": "out",
-          "logic": "out = inp.joke",
+          "logic": "out = inp.value",
           "message": null,
           "expression": null,
           "mode": null,
@@ -157,7 +157,7 @@
       "group": "Basic"
     },
     {
-      "id": "dndnode_18899669-9d88-44ef-839f-7a9569cefdcc",
+      "id": "dndnode_32ca0bbb-f845-4d00-ae3d-4604224473bf",
       "type": "custom",
       "initialized": false,
       "position": {
@@ -209,7 +209,7 @@
       "group": "System"
     },
     {
-      "id": "dndnode_cdc06973-a352-4dc9-ab2c-8fb7d60bbe19",
+      "id": "dndnode_ea52e04e-ecd9-4bb6-a1dd-28712f908694",
       "type": "custom",
       "initialized": false,
       "position": {
@@ -222,7 +222,7 @@
         "nodeName": "end",
         "title": "End",
         "configData": {
-          "label": "End of Flow",
+          "label": "End",
           "notes": "",
           "incomingSockets": null,
           "outgoingSockets": null,
@@ -263,10 +263,10 @@
   ],
   "edges": [
     {
-      "id": "edge_dndnode_b20c29ac-44b4-4034-ada8-88851db5b21f_dndnode_3295c629-2148-4903-8f76-e66cf57e55c2",
+      "id": "edge_dndnode_4617b536-4971-4ebf-8883-183ee07d5d3b_dndnode_b1b54298-345f-47d8-bca8-ed143d3f2d15",
       "type": "custom",
-      "source": "dndnode_b20c29ac-44b4-4034-ada8-88851db5b21f",
-      "target": "dndnode_3295c629-2148-4903-8f76-e66cf57e55c2",
+      "source": "dndnode_4617b536-4971-4ebf-8883-183ee07d5d3b",
+      "target": "dndnode_b1b54298-345f-47d8-bca8-ed143d3f2d15",
       "sourceHandle": "_Data#undefinedsource",
       "targetHandle": "_Data#undefinedtarget",
       "data": {},
@@ -277,10 +277,10 @@
       "targetY": 0.0
     },
     {
-      "id": "edge_dndnode_3295c629-2148-4903-8f76-e66cf57e55c2_dndnode_ebd65609-c7a6-4abf-8b41-2aea0729c0af",
+      "id": "edge_dndnode_b1b54298-345f-47d8-bca8-ed143d3f2d15_dndnode_7921b18a-46a5-49d5-a81e-4387227bd7e7",
       "type": "custom",
-      "source": "dndnode_3295c629-2148-4903-8f76-e66cf57e55c2",
-      "target": "dndnode_ebd65609-c7a6-4abf-8b41-2aea0729c0af",
+      "source": "dndnode_b1b54298-345f-47d8-bca8-ed143d3f2d15",
+      "target": "dndnode_7921b18a-46a5-49d5-a81e-4387227bd7e7",
       "sourceHandle": "_Response#undefinedsource",
       "targetHandle": "inp#undefinedtarget",
       "data": {},
@@ -291,10 +291,10 @@
       "targetY": 0.0
     },
     {
-      "id": "edge_dndnode_ebd65609-c7a6-4abf-8b41-2aea0729c0af_dndnode_18899669-9d88-44ef-839f-7a9569cefdcc",
+      "id": "edge_dndnode_7921b18a-46a5-49d5-a81e-4387227bd7e7_dndnode_32ca0bbb-f845-4d00-ae3d-4604224473bf",
       "type": "custom",
-      "source": "dndnode_ebd65609-c7a6-4abf-8b41-2aea0729c0af",
-      "target": "dndnode_18899669-9d88-44ef-839f-7a9569cefdcc",
+      "source": "dndnode_7921b18a-46a5-49d5-a81e-4387227bd7e7",
+      "target": "dndnode_32ca0bbb-f845-4d00-ae3d-4604224473bf",
       "sourceHandle": "out#undefinedsource",
       "targetHandle": "_In#undefinedtarget",
       "data": {},
@@ -305,10 +305,10 @@
       "targetY": 0.0
     },
     {
-      "id": "edge_dndnode_18899669-9d88-44ef-839f-7a9569cefdcc_dndnode_cdc06973-a352-4dc9-ab2c-8fb7d60bbe19",
+      "id": "edge_dndnode_32ca0bbb-f845-4d00-ae3d-4604224473bf_dndnode_ea52e04e-ecd9-4bb6-a1dd-28712f908694",
       "type": "custom",
-      "source": "dndnode_18899669-9d88-44ef-839f-7a9569cefdcc",
-      "target": "dndnode_cdc06973-a352-4dc9-ab2c-8fb7d60bbe19",
+      "source": "dndnode_32ca0bbb-f845-4d00-ae3d-4604224473bf",
+      "target": "dndnode_ea52e04e-ecd9-4bb6-a1dd-28712f908694",
       "sourceHandle": "_Out#undefinedsource",
       "targetHandle": "_Data#undefinedtarget",
       "data": {},

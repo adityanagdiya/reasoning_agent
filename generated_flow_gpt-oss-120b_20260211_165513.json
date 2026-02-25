@@ -1,8 +1,8 @@
 {
-   "task": "Create a flow that fetches a joke from the Chuck Norris API (REST interface) and then write the logic to only get the joke from the response json. and at the end log that joke.",
+   "task": "Create a flow that fetches a joke from the Chuck Norris API (REST interface) , then log the whole json response. then simply write the logic to only get the joke from the response json and log this too.",
    "nodes": [
       {
-         "id": "dndnode_96d5769b-3495-4a7a-8754-a7bf72096585",
+         "id": "dndnode_ffa74b6b-fcc1-4aca-baa2-049fe473889c",
          "type": "custom",
          "initialized": false,
          "position": {
@@ -56,7 +56,7 @@
          "group": "Basic"
       },
       {
-         "id": "dndnode_8231cd45-e228-4e2d-9e56-eceaf7b4d013",
+         "id": "dndnode_fd51f6bb-ed6e-4513-9076-08a87b0e9940",
          "type": "custom",
          "initialized": false,
          "position": {
@@ -74,7 +74,7 @@
             "nodeName": "Core:HTTPRequest",
             "title": "Core:HTTPRequest",
             "configData": {
-               "label": "Fetch Chuck Norris Joke",
+               "label": "Fetch Joke",
                "notes": null,
                "incomingSockets": null,
                "outgoingSockets": null,
@@ -113,7 +113,63 @@
          "group": "Outbound"
       },
       {
-         "id": "dndnode_89096f32-3e85-44f3-bce9-f9b78dec60da",
+         "id": "dndnode_487c2e93-ed6e-4ebc-8adc-b1dd81a0ad72",
+         "type": "custom",
+         "initialized": false,
+         "position": {
+            "x": 0.0,
+            "y": 0.0
+         },
+         "data": {
+            "inputs": [
+               "_In"
+            ],
+            "outputs": [
+               "_Out"
+            ],
+            "nodeName": "Core:Log",
+            "title": "Core:Log",
+            "configData": {
+               "label": "Log Full Response",
+               "notes": null,
+               "incomingSockets": null,
+               "outgoingSockets": null,
+               "logic": null,
+               "message": "Full joke response",
+               "expression": null,
+               "mode": null,
+               "endpoint": null,
+               "method": null,
+               "headers": null,
+               "queryStrings": null,
+               "body": null,
+               "typeOfResponse": null,
+               "proxy": null,
+               "proxyPort": null,
+               "proxyUser": null,
+               "proxyPassword": null,
+               "basicAuthUser": null,
+               "basicAuthPassword": null,
+               "keyStore": null,
+               "keyStorePassword": null,
+               "trustStore": null,
+               "trustStorePassword": null
+            },
+            "legacyType": "workflow",
+            "legacyName": "Core:Log",
+            "unavailable": false,
+            "twoColumn": true,
+            "nodeType": "workflow",
+            "configSchema": null,
+            "action": "log"
+         },
+         "style": {
+            "width": 250
+         },
+         "group": "System"
+      },
+      {
+         "id": "dndnode_778e99c5-9c73-430a-b844-dac057f25860",
          "type": "custom",
          "initialized": false,
          "position": {
@@ -127,14 +183,14 @@
             "outputs": [
                "out"
             ],
-            "nodeName": "logic#dndnode_89096f32-3e85-44f3-bce9-f9b78dec60da",
+            "nodeName": "logic#dndnode_778e99c5-9c73-430a-b844-dac057f25860",
             "title": "Logic",
             "configData": {
                "label": "Extract Joke",
                "notes": "",
                "incomingSockets": "inp",
                "outgoingSockets": "out",
-               "logic": "out = inp.joke",
+               "logic": "out=inp._Response?.value",
                "message": null,
                "expression": null,
                "mode": null,
@@ -169,7 +225,7 @@
          "group": "Basic"
       },
       {
-         "id": "dndnode_fd8e3ce9-189e-43e9-bb1a-e910d429dd3e",
+         "id": "dndnode_e038e95a-76f3-43ec-acf8-e1d7f96e863e",
          "type": "custom",
          "initialized": false,
          "position": {
@@ -191,7 +247,7 @@
                "incomingSockets": null,
                "outgoingSockets": null,
                "logic": null,
-               "message": "Fetched joke",
+               "message": "Extracted joke",
                "expression": null,
                "mode": null,
                "endpoint": null,
@@ -225,7 +281,7 @@
          "group": "System"
       },
       {
-         "id": "dndnode_dc96a3d4-35dc-4920-a72c-d198f48f602d",
+         "id": "dndnode_09810710-84ad-4467-882a-a0bb5f857a4e",
          "type": "custom",
          "initialized": false,
          "position": {
@@ -281,10 +337,10 @@
    ],
    "edges": [
       {
-         "id": "edge_dndnode_96d5769b-3495-4a7a-8754-a7bf72096585_dndnode_8231cd45-e228-4e2d-9e56-eceaf7b4d013",
+         "id": "edge_dndnode_ffa74b6b-fcc1-4aca-baa2-049fe473889c_dndnode_fd51f6bb-ed6e-4513-9076-08a87b0e9940",
          "type": "custom",
-         "source": "dndnode_96d5769b-3495-4a7a-8754-a7bf72096585",
-         "target": "dndnode_8231cd45-e228-4e2d-9e56-eceaf7b4d013",
+         "source": "dndnode_ffa74b6b-fcc1-4aca-baa2-049fe473889c",
+         "target": "dndnode_fd51f6bb-ed6e-4513-9076-08a87b0e9940",
          "sourceHandle": "_Data#undefinedsource",
          "targetHandle": "_Data#undefinedtarget",
          "data": {},
@@ -295,11 +351,25 @@
          "targetY": 0.0
       },
       {
-         "id": "edge_dndnode_8231cd45-e228-4e2d-9e56-eceaf7b4d013_dndnode_89096f32-3e85-44f3-bce9-f9b78dec60da",
+         "id": "edge_dndnode_fd51f6bb-ed6e-4513-9076-08a87b0e9940_dndnode_487c2e93-ed6e-4ebc-8adc-b1dd81a0ad72",
          "type": "custom",
-         "source": "dndnode_8231cd45-e228-4e2d-9e56-eceaf7b4d013",
-         "target": "dndnode_89096f32-3e85-44f3-bce9-f9b78dec60da",
+         "source": "dndnode_fd51f6bb-ed6e-4513-9076-08a87b0e9940",
+         "target": "dndnode_487c2e93-ed6e-4ebc-8adc-b1dd81a0ad72",
          "sourceHandle": "_Response#undefinedsource",
+         "targetHandle": "_In#undefinedtarget",
+         "data": {},
+         "label": "",
+         "sourceX": 0.0,
+         "sourceY": 0.0,
+         "targetX": 0.0,
+         "targetY": 0.0
+      },
+      {
+         "id": "edge_dndnode_487c2e93-ed6e-4ebc-8adc-b1dd81a0ad72_dndnode_778e99c5-9c73-430a-b844-dac057f25860",
+         "type": "custom",
+         "source": "dndnode_487c2e93-ed6e-4ebc-8adc-b1dd81a0ad72",
+         "target": "dndnode_778e99c5-9c73-430a-b844-dac057f25860",
+         "sourceHandle": "_Out#undefinedsource",
          "targetHandle": "inp#undefinedtarget",
          "data": {},
          "label": "",
@@ -309,10 +379,10 @@
          "targetY": 0.0
       },
       {
-         "id": "edge_dndnode_89096f32-3e85-44f3-bce9-f9b78dec60da_dndnode_fd8e3ce9-189e-43e9-bb1a-e910d429dd3e",
+         "id": "edge_dndnode_778e99c5-9c73-430a-b844-dac057f25860_dndnode_e038e95a-76f3-43ec-acf8-e1d7f96e863e",
          "type": "custom",
-         "source": "dndnode_89096f32-3e85-44f3-bce9-f9b78dec60da",
-         "target": "dndnode_fd8e3ce9-189e-43e9-bb1a-e910d429dd3e",
+         "source": "dndnode_778e99c5-9c73-430a-b844-dac057f25860",
+         "target": "dndnode_e038e95a-76f3-43ec-acf8-e1d7f96e863e",
          "sourceHandle": "out#undefinedsource",
          "targetHandle": "_In#undefinedtarget",
          "data": {},
@@ -323,10 +393,10 @@
          "targetY": 0.0
       },
       {
-         "id": "edge_dndnode_fd8e3ce9-189e-43e9-bb1a-e910d429dd3e_dndnode_dc96a3d4-35dc-4920-a72c-d198f48f602d",
+         "id": "edge_dndnode_e038e95a-76f3-43ec-acf8-e1d7f96e863e_dndnode_09810710-84ad-4467-882a-a0bb5f857a4e",
          "type": "custom",
-         "source": "dndnode_fd8e3ce9-189e-43e9-bb1a-e910d429dd3e",
-         "target": "dndnode_dc96a3d4-35dc-4920-a72c-d198f48f602d",
+         "source": "dndnode_e038e95a-76f3-43ec-acf8-e1d7f96e863e",
+         "target": "dndnode_09810710-84ad-4467-882a-a0bb5f857a4e",
          "sourceHandle": "_Out#undefinedsource",
          "targetHandle": "_Data#undefinedtarget",
          "data": {},

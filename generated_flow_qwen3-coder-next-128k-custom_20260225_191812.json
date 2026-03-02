@@ -1,0 +1,770 @@
+{
+   "task": "\n    create a flow that fatches a joke from the chuck norris api \n    and then consider the joke string as an input for computing md5 hash of that joke \n    and also log that joke.\n    then compute length of that hashed value , and log this too.\n    then at the end log last 5 characters of this hashed value.\n    ",
+   "nodes": [
+      {
+         "id": "dndnode_8cc1ba20-deed-40c9-80f6-0043d54e474e",
+         "type": "custom",
+         "initialized": false,
+         "position": {
+            "x": 0.0,
+            "y": 0.0
+         },
+         "data": {
+            "inputs": [],
+            "outputs": [
+               "_Data"
+            ],
+            "nodeName": "start",
+            "title": "Start",
+            "configData": {
+               "label": "Start",
+               "notes": "Flow starts here with the initial trigger document",
+               "incomingSockets": null,
+               "outgoingSockets": null,
+               "logic": null,
+               "message": null,
+               "expression": null,
+               "mode": null,
+               "endpoint": null,
+               "method": null,
+               "headers": null,
+               "queryStrings": null,
+               "body": null,
+               "typeOfResponse": null,
+               "proxy": null,
+               "proxyPort": null,
+               "proxyUser": null,
+               "proxyPassword": null,
+               "basicAuthUser": null,
+               "basicAuthPassword": null,
+               "keyStore": null,
+               "keyStorePassword": null,
+               "trustStore": null,
+               "trustStorePassword": null
+            },
+            "legacyType": "start",
+            "legacyName": "start",
+            "unavailable": false,
+            "twoColumn": true,
+            "nodeType": "start",
+            "configSchema": null,
+            "action": ""
+         },
+         "style": {
+            "width": 250
+         },
+         "group": "Basic"
+      },
+      {
+         "id": "dndnode_ebe1d95b-d03c-4355-aa46-7b56d464c82d",
+         "type": "custom",
+         "initialized": false,
+         "position": {
+            "x": 0.0,
+            "y": 0.0
+         },
+         "data": {
+            "inputs": [
+               "_Data"
+            ],
+            "outputs": [
+               "_Response",
+               "_Error"
+            ],
+            "nodeName": "Core:HTTPRequest",
+            "title": "Core:HTTPRequest",
+            "configData": {
+               "label": "Fetch Joke",
+               "notes": null,
+               "incomingSockets": null,
+               "outgoingSockets": null,
+               "logic": null,
+               "message": null,
+               "expression": null,
+               "mode": "Simple",
+               "endpoint": "https://api.chucknorris.io/jokes/random",
+               "method": "get",
+               "headers": null,
+               "queryStrings": null,
+               "body": null,
+               "typeOfResponse": "JSON As Map",
+               "proxy": null,
+               "proxyPort": null,
+               "proxyUser": null,
+               "proxyPassword": null,
+               "basicAuthUser": null,
+               "basicAuthPassword": null,
+               "keyStore": null,
+               "keyStorePassword": null,
+               "trustStore": null,
+               "trustStorePassword": null
+            },
+            "legacyType": "workflow",
+            "legacyName": "Core:HTTPRequest",
+            "unavailable": false,
+            "twoColumn": true,
+            "nodeType": "workflow",
+            "configSchema": null,
+            "action": "httpRequest"
+         },
+         "style": {
+            "width": 250
+         },
+         "group": "Outbound"
+      },
+      {
+         "id": "dndnode_e1b082bb-5d83-461e-8399-7545014c8e88",
+         "type": "custom",
+         "initialized": false,
+         "position": {
+            "x": 0.0,
+            "y": 0.0
+         },
+         "data": {
+            "inputs": [
+               "inp"
+            ],
+            "outputs": [
+               "out"
+            ],
+            "nodeName": "logic#dndnode_e1b082bb-5d83-461e-8399-7545014c8e88",
+            "title": "Logic",
+            "configData": {
+               "label": "Extract Joke Value",
+               "notes": "Extract the 'value' field from the API response",
+               "incomingSockets": "inp",
+               "outgoingSockets": "out",
+               "logic": "#python\nout_sockets[\"out\"] = in_sockets[\"inp\"].get(\"value\", \"\")",
+               "message": null,
+               "expression": null,
+               "mode": null,
+               "endpoint": null,
+               "method": null,
+               "headers": null,
+               "queryStrings": null,
+               "body": null,
+               "typeOfResponse": null,
+               "proxy": null,
+               "proxyPort": null,
+               "proxyUser": null,
+               "proxyPassword": null,
+               "basicAuthUser": null,
+               "basicAuthPassword": null,
+               "keyStore": null,
+               "keyStorePassword": null,
+               "trustStore": null,
+               "trustStorePassword": null
+            },
+            "legacyType": "logic",
+            "legacyName": "logic",
+            "unavailable": false,
+            "twoColumn": true,
+            "nodeType": "logic",
+            "configSchema": null,
+            "action": ""
+         },
+         "style": {
+            "width": 250
+         },
+         "group": "Basic"
+      },
+      {
+         "id": "dndnode_95ae945b-fef4-4e5a-bcc3-fd59aaaf474f",
+         "type": "custom",
+         "initialized": false,
+         "position": {
+            "x": 0.0,
+            "y": 0.0
+         },
+         "data": {
+            "inputs": [
+               "_In"
+            ],
+            "outputs": [
+               "_Out"
+            ],
+            "nodeName": "Core:Log",
+            "title": "Core:Log",
+            "configData": {
+               "label": "Log Joke",
+               "notes": null,
+               "incomingSockets": null,
+               "outgoingSockets": null,
+               "logic": null,
+               "message": "Fetched joke: ",
+               "expression": null,
+               "mode": null,
+               "endpoint": null,
+               "method": null,
+               "headers": null,
+               "queryStrings": null,
+               "body": null,
+               "typeOfResponse": null,
+               "proxy": null,
+               "proxyPort": null,
+               "proxyUser": null,
+               "proxyPassword": null,
+               "basicAuthUser": null,
+               "basicAuthPassword": null,
+               "keyStore": null,
+               "keyStorePassword": null,
+               "trustStore": null,
+               "trustStorePassword": null
+            },
+            "legacyType": "workflow",
+            "legacyName": "Core:Log",
+            "unavailable": false,
+            "twoColumn": true,
+            "nodeType": "workflow",
+            "configSchema": null,
+            "action": "log"
+         },
+         "style": {
+            "width": 250
+         },
+         "group": "System"
+      },
+      {
+         "id": "dndnode_7e9a5c7a-2b51-4f59-8afd-a3b59f02207d",
+         "type": "custom",
+         "initialized": false,
+         "position": {
+            "x": 0.0,
+            "y": 0.0
+         },
+         "data": {
+            "inputs": [
+               "inp"
+            ],
+            "outputs": [
+               "out"
+            ],
+            "nodeName": "logic#dndnode_7e9a5c7a-2b51-4f59-8afd-a3b59f02207d",
+            "title": "Logic",
+            "configData": {
+               "label": "Compute MD5 Hash",
+               "notes": "Compute MD5 hash of the joke string",
+               "incomingSockets": "inp",
+               "outgoingSockets": "out",
+               "logic": "#python\nimport hashlib\njoke = in_sockets[\"inp\"]\nmd5_hash = hashlib.md5(joke.encode()).hexdigest()\nout_sockets[\"out\"] = md5_hash",
+               "message": null,
+               "expression": null,
+               "mode": null,
+               "endpoint": null,
+               "method": null,
+               "headers": null,
+               "queryStrings": null,
+               "body": null,
+               "typeOfResponse": null,
+               "proxy": null,
+               "proxyPort": null,
+               "proxyUser": null,
+               "proxyPassword": null,
+               "basicAuthUser": null,
+               "basicAuthPassword": null,
+               "keyStore": null,
+               "keyStorePassword": null,
+               "trustStore": null,
+               "trustStorePassword": null
+            },
+            "legacyType": "logic",
+            "legacyName": "logic",
+            "unavailable": false,
+            "twoColumn": true,
+            "nodeType": "logic",
+            "configSchema": null,
+            "action": ""
+         },
+         "style": {
+            "width": 250
+         },
+         "group": "Basic"
+      },
+      {
+         "id": "dndnode_b996942f-284e-402d-9405-fd65ea475c7a",
+         "type": "custom",
+         "initialized": false,
+         "position": {
+            "x": 0.0,
+            "y": 0.0
+         },
+         "data": {
+            "inputs": [
+               "_In"
+            ],
+            "outputs": [
+               "_Out"
+            ],
+            "nodeName": "Core:Log",
+            "title": "Core:Log",
+            "configData": {
+               "label": "Log MD5 Hash",
+               "notes": null,
+               "incomingSockets": null,
+               "outgoingSockets": null,
+               "logic": null,
+               "message": "MD5 hash of joke: ",
+               "expression": null,
+               "mode": null,
+               "endpoint": null,
+               "method": null,
+               "headers": null,
+               "queryStrings": null,
+               "body": null,
+               "typeOfResponse": null,
+               "proxy": null,
+               "proxyPort": null,
+               "proxyUser": null,
+               "proxyPassword": null,
+               "basicAuthUser": null,
+               "basicAuthPassword": null,
+               "keyStore": null,
+               "keyStorePassword": null,
+               "trustStore": null,
+               "trustStorePassword": null
+            },
+            "legacyType": "workflow",
+            "legacyName": "Core:Log",
+            "unavailable": false,
+            "twoColumn": true,
+            "nodeType": "workflow",
+            "configSchema": null,
+            "action": "log"
+         },
+         "style": {
+            "width": 250
+         },
+         "group": "System"
+      },
+      {
+         "id": "dndnode_61c5cce0-4b2e-44cb-8d30-a40faa84d5da",
+         "type": "custom",
+         "initialized": false,
+         "position": {
+            "x": 0.0,
+            "y": 0.0
+         },
+         "data": {
+            "inputs": [
+               "inp"
+            ],
+            "outputs": [
+               "out"
+            ],
+            "nodeName": "logic#dndnode_61c5cce0-4b2e-44cb-8d30-a40faa84d5da",
+            "title": "Logic",
+            "configData": {
+               "label": "Compute Hash Length",
+               "notes": "Compute length of the MD5 hash string",
+               "incomingSockets": "inp",
+               "outgoingSockets": "out",
+               "logic": "#python\nmd5_hash = in_sockets[\"inp\"]\nhash_length = len(md5_hash)\nout_sockets[\"out\"] = hash_length",
+               "message": null,
+               "expression": null,
+               "mode": null,
+               "endpoint": null,
+               "method": null,
+               "headers": null,
+               "queryStrings": null,
+               "body": null,
+               "typeOfResponse": null,
+               "proxy": null,
+               "proxyPort": null,
+               "proxyUser": null,
+               "proxyPassword": null,
+               "basicAuthUser": null,
+               "basicAuthPassword": null,
+               "keyStore": null,
+               "keyStorePassword": null,
+               "trustStore": null,
+               "trustStorePassword": null
+            },
+            "legacyType": "logic",
+            "legacyName": "logic",
+            "unavailable": false,
+            "twoColumn": true,
+            "nodeType": "logic",
+            "configSchema": null,
+            "action": ""
+         },
+         "style": {
+            "width": 250
+         },
+         "group": "Basic"
+      },
+      {
+         "id": "dndnode_ba4e7a69-d239-46e3-bec0-c9a49bfc40fa",
+         "type": "custom",
+         "initialized": false,
+         "position": {
+            "x": 0.0,
+            "y": 0.0
+         },
+         "data": {
+            "inputs": [
+               "_In"
+            ],
+            "outputs": [
+               "_Out"
+            ],
+            "nodeName": "Core:Log",
+            "title": "Core:Log",
+            "configData": {
+               "label": "Log Hash Length",
+               "notes": null,
+               "incomingSockets": null,
+               "outgoingSockets": null,
+               "logic": null,
+               "message": "Length of MD5 hash: ",
+               "expression": null,
+               "mode": null,
+               "endpoint": null,
+               "method": null,
+               "headers": null,
+               "queryStrings": null,
+               "body": null,
+               "typeOfResponse": null,
+               "proxy": null,
+               "proxyPort": null,
+               "proxyUser": null,
+               "proxyPassword": null,
+               "basicAuthUser": null,
+               "basicAuthPassword": null,
+               "keyStore": null,
+               "keyStorePassword": null,
+               "trustStore": null,
+               "trustStorePassword": null
+            },
+            "legacyType": "workflow",
+            "legacyName": "Core:Log",
+            "unavailable": false,
+            "twoColumn": true,
+            "nodeType": "workflow",
+            "configSchema": null,
+            "action": "log"
+         },
+         "style": {
+            "width": 250
+         },
+         "group": "System"
+      },
+      {
+         "id": "dndnode_5d274591-cf34-496e-b23c-421cc0e8ae2d",
+         "type": "custom",
+         "initialized": false,
+         "position": {
+            "x": 0.0,
+            "y": 0.0
+         },
+         "data": {
+            "inputs": [
+               "inp"
+            ],
+            "outputs": [
+               "out"
+            ],
+            "nodeName": "logic#dndnode_5d274591-cf34-496e-b23c-421cc0e8ae2d",
+            "title": "Logic",
+            "configData": {
+               "label": "Extract Last 5 Chars",
+               "notes": "Extract last 5 characters of the MD5 hash",
+               "incomingSockets": "inp",
+               "outgoingSockets": "out",
+               "logic": "#python\nmd5_hash = in_sockets[\"inp\"]\nlast_5_chars = md5_hash[-5:]\nout_sockets[\"out\"] = last_5_chars",
+               "message": null,
+               "expression": null,
+               "mode": null,
+               "endpoint": null,
+               "method": null,
+               "headers": null,
+               "queryStrings": null,
+               "body": null,
+               "typeOfResponse": null,
+               "proxy": null,
+               "proxyPort": null,
+               "proxyUser": null,
+               "proxyPassword": null,
+               "basicAuthUser": null,
+               "basicAuthPassword": null,
+               "keyStore": null,
+               "keyStorePassword": null,
+               "trustStore": null,
+               "trustStorePassword": null
+            },
+            "legacyType": "logic",
+            "legacyName": "logic",
+            "unavailable": false,
+            "twoColumn": true,
+            "nodeType": "logic",
+            "configSchema": null,
+            "action": ""
+         },
+         "style": {
+            "width": 250
+         },
+         "group": "Basic"
+      },
+      {
+         "id": "dndnode_14935771-f2c5-41d2-9d9d-4d312d5116d2",
+         "type": "custom",
+         "initialized": false,
+         "position": {
+            "x": 0.0,
+            "y": 0.0
+         },
+         "data": {
+            "inputs": [
+               "_In"
+            ],
+            "outputs": [],
+            "nodeName": "Core:Log",
+            "title": "Core:Log",
+            "configData": {
+               "label": "Log Last 5 Chars",
+               "notes": null,
+               "incomingSockets": null,
+               "outgoingSockets": null,
+               "logic": null,
+               "message": "Last 5 characters of MD5 hash: ",
+               "expression": null,
+               "mode": null,
+               "endpoint": null,
+               "method": null,
+               "headers": null,
+               "queryStrings": null,
+               "body": null,
+               "typeOfResponse": null,
+               "proxy": null,
+               "proxyPort": null,
+               "proxyUser": null,
+               "proxyPassword": null,
+               "basicAuthUser": null,
+               "basicAuthPassword": null,
+               "keyStore": null,
+               "keyStorePassword": null,
+               "trustStore": null,
+               "trustStorePassword": null
+            },
+            "legacyType": "workflow",
+            "legacyName": "Core:Log",
+            "unavailable": false,
+            "twoColumn": true,
+            "nodeType": "workflow",
+            "configSchema": null,
+            "action": "log"
+         },
+         "style": {
+            "width": 250
+         },
+         "group": "System"
+      },
+      {
+         "id": "dndnode_f9a52bef-d709-4117-9791-79b122f0adf2",
+         "type": "custom",
+         "initialized": false,
+         "position": {
+            "x": 0.0,
+            "y": 0.0
+         },
+         "data": {
+            "inputs": [],
+            "outputs": [],
+            "nodeName": "end",
+            "title": "End",
+            "configData": {
+               "label": "End",
+               "notes": "Flow ends here",
+               "incomingSockets": null,
+               "outgoingSockets": null,
+               "logic": null,
+               "message": null,
+               "expression": null,
+               "mode": null,
+               "endpoint": null,
+               "method": null,
+               "headers": null,
+               "queryStrings": null,
+               "body": null,
+               "typeOfResponse": null,
+               "proxy": null,
+               "proxyPort": null,
+               "proxyUser": null,
+               "proxyPassword": null,
+               "basicAuthUser": null,
+               "basicAuthPassword": null,
+               "keyStore": null,
+               "keyStorePassword": null,
+               "trustStore": null,
+               "trustStorePassword": null
+            },
+            "legacyType": "end",
+            "legacyName": "end",
+            "unavailable": false,
+            "twoColumn": true,
+            "nodeType": "end",
+            "configSchema": null,
+            "action": ""
+         },
+         "style": {
+            "width": 250
+         },
+         "group": "Basic"
+      }
+   ],
+   "edges": [
+      {
+         "id": "edge_dndnode_8cc1ba20-deed-40c9-80f6-0043d54e474e_dndnode_ebe1d95b-d03c-4355-aa46-7b56d464c82d",
+         "type": "custom",
+         "source": "dndnode_8cc1ba20-deed-40c9-80f6-0043d54e474e",
+         "target": "dndnode_ebe1d95b-d03c-4355-aa46-7b56d464c82d",
+         "sourceHandle": "_Data#undefinedsource",
+         "targetHandle": "_Data#undefinedtarget",
+         "data": {},
+         "label": "",
+         "sourceX": 0.0,
+         "sourceY": 0.0,
+         "targetX": 0.0,
+         "targetY": 0.0
+      },
+      {
+         "id": "edge_dndnode_ebe1d95b-d03c-4355-aa46-7b56d464c82d_dndnode_e1b082bb-5d83-461e-8399-7545014c8e88",
+         "type": "custom",
+         "source": "dndnode_ebe1d95b-d03c-4355-aa46-7b56d464c82d",
+         "target": "dndnode_e1b082bb-5d83-461e-8399-7545014c8e88",
+         "sourceHandle": "_Response#undefinedsource",
+         "targetHandle": "inp#undefinedtarget",
+         "data": {},
+         "label": "",
+         "sourceX": 0.0,
+         "sourceY": 0.0,
+         "targetX": 0.0,
+         "targetY": 0.0
+      },
+      {
+         "id": "edge_dndnode_e1b082bb-5d83-461e-8399-7545014c8e88_dndnode_95ae945b-fef4-4e5a-bcc3-fd59aaaf474f",
+         "type": "custom",
+         "source": "dndnode_e1b082bb-5d83-461e-8399-7545014c8e88",
+         "target": "dndnode_95ae945b-fef4-4e5a-bcc3-fd59aaaf474f",
+         "sourceHandle": "out#undefinedsource",
+         "targetHandle": "_In#undefinedtarget",
+         "data": {},
+         "label": "",
+         "sourceX": 0.0,
+         "sourceY": 0.0,
+         "targetX": 0.0,
+         "targetY": 0.0
+      },
+      {
+         "id": "edge_dndnode_95ae945b-fef4-4e5a-bcc3-fd59aaaf474f_dndnode_7e9a5c7a-2b51-4f59-8afd-a3b59f02207d",
+         "type": "custom",
+         "source": "dndnode_95ae945b-fef4-4e5a-bcc3-fd59aaaf474f",
+         "target": "dndnode_7e9a5c7a-2b51-4f59-8afd-a3b59f02207d",
+         "sourceHandle": "_Out#undefinedsource",
+         "targetHandle": "inp#undefinedtarget",
+         "data": {},
+         "label": "",
+         "sourceX": 0.0,
+         "sourceY": 0.0,
+         "targetX": 0.0,
+         "targetY": 0.0
+      },
+      {
+         "id": "edge_dndnode_7e9a5c7a-2b51-4f59-8afd-a3b59f02207d_dndnode_b996942f-284e-402d-9405-fd65ea475c7a",
+         "type": "custom",
+         "source": "dndnode_7e9a5c7a-2b51-4f59-8afd-a3b59f02207d",
+         "target": "dndnode_b996942f-284e-402d-9405-fd65ea475c7a",
+         "sourceHandle": "out#undefinedsource",
+         "targetHandle": "_In#undefinedtarget",
+         "data": {},
+         "label": "",
+         "sourceX": 0.0,
+         "sourceY": 0.0,
+         "targetX": 0.0,
+         "targetY": 0.0
+      },
+      {
+         "id": "edge_dndnode_7e9a5c7a-2b51-4f59-8afd-a3b59f02207d_dndnode_61c5cce0-4b2e-44cb-8d30-a40faa84d5da",
+         "type": "custom",
+         "source": "dndnode_7e9a5c7a-2b51-4f59-8afd-a3b59f02207d",
+         "target": "dndnode_61c5cce0-4b2e-44cb-8d30-a40faa84d5da",
+         "sourceHandle": "out#undefinedsource",
+         "targetHandle": "inp#undefinedtarget",
+         "data": {
+            "order": 1
+         },
+         "label": "",
+         "sourceX": 0.0,
+         "sourceY": 0.0,
+         "targetX": 0.0,
+         "targetY": 0.0
+      },
+      {
+         "id": "edge_dndnode_61c5cce0-4b2e-44cb-8d30-a40faa84d5da_dndnode_ba4e7a69-d239-46e3-bec0-c9a49bfc40fa",
+         "type": "custom",
+         "source": "dndnode_61c5cce0-4b2e-44cb-8d30-a40faa84d5da",
+         "target": "dndnode_ba4e7a69-d239-46e3-bec0-c9a49bfc40fa",
+         "sourceHandle": "out#undefinedsource",
+         "targetHandle": "_In#undefinedtarget",
+         "data": {},
+         "label": "",
+         "sourceX": 0.0,
+         "sourceY": 0.0,
+         "targetX": 0.0,
+         "targetY": 0.0
+      },
+      {
+         "id": "edge_dndnode_7e9a5c7a-2b51-4f59-8afd-a3b59f02207d_dndnode_5d274591-cf34-496e-b23c-421cc0e8ae2d",
+         "type": "custom",
+         "source": "dndnode_7e9a5c7a-2b51-4f59-8afd-a3b59f02207d",
+         "target": "dndnode_5d274591-cf34-496e-b23c-421cc0e8ae2d",
+         "sourceHandle": "out#undefinedsource",
+         "targetHandle": "inp#undefinedtarget",
+         "data": {
+            "order": 2
+         },
+         "label": "",
+         "sourceX": 0.0,
+         "sourceY": 0.0,
+         "targetX": 0.0,
+         "targetY": 0.0
+      },
+      {
+         "id": "edge_dndnode_5d274591-cf34-496e-b23c-421cc0e8ae2d_dndnode_14935771-f2c5-41d2-9d9d-4d312d5116d2",
+         "type": "custom",
+         "source": "dndnode_5d274591-cf34-496e-b23c-421cc0e8ae2d",
+         "target": "dndnode_14935771-f2c5-41d2-9d9d-4d312d5116d2",
+         "sourceHandle": "out#undefinedsource",
+         "targetHandle": "_In#undefinedtarget",
+         "data": {},
+         "label": "",
+         "sourceX": 0.0,
+         "sourceY": 0.0,
+         "targetX": 0.0,
+         "targetY": 0.0
+      },
+      {
+         "id": "edge_dndnode_14935771-f2c5-41d2-9d9d-4d312d5116d2_dndnode_f9a52bef-d709-4117-9791-79b122f0adf2",
+         "type": "custom",
+         "source": "dndnode_14935771-f2c5-41d2-9d9d-4d312d5116d2",
+         "target": "dndnode_f9a52bef-d709-4117-9791-79b122f0adf2",
+         "sourceHandle": "_Out#undefinedsource",
+         "targetHandle": "_Data#undefinedtarget",
+         "data": {},
+         "label": "",
+         "sourceX": 0.0,
+         "sourceY": 0.0,
+         "targetX": 0.0,
+         "targetY": 0.0
+      }
+   ],
+   "position": [
+      0.0,
+      0.0
+   ],
+   "zoom": 1.0,
+   "viewport": {
+      "x": 0.0,
+      "y": 0.0,
+      "zoom": 1.0
+   }
+}

@@ -230,8 +230,8 @@ if __name__ == "__main__":
     
     # task= "create a flow for logging 'hello world' ."
 
-    task = """Create a flow that fetches a joke from the Chuck Norris API 
-    and then extract only the joke from the response and then log this joke."""
+    # task = """Create a flow that fetches a joke from the Chuck Norris API 
+    # and then extract only the joke from the response and then log this joke."""
 
     # task = """  Create a flow that fetches a joke from the Chuck Norris API (REST interface), 
     #             then log the whole json response. 
@@ -248,9 +248,24 @@ if __name__ == "__main__":
     #             and then simply write a single logic to concatinate those two jokes (use .value to get only the joke from the response json) . 
     #             at the end log this final concatinated joke."""
 
-    # task = """Create a flow that fetches a joke from the Chuck Norris API (REST interface) 
-    # and then simply write the logic to get the length of the joke from the response json(use .value to get only the joke from the response json). 
-    # and then if the length is greater than 100, then log 'Joke is too long' otherwise log 'Joke is short'.""" 
+    task = """Create a flow that fetches a joke from the Chuck Norris API (REST interface) 
+    and then simply write the logic to get the length of the joke from the response json(use .value to get only the joke from the response json). 
+    and then if the length is greater than 100, then log 'Joke is too long' otherwise log 'Joke is short'.""" 
+
+    task="""
+    create a flow that fatches a joke from the chuck norris api 
+    and then consider the joke string as an input for computing md5 hash of that joke 
+    and also log that joke.
+    then compute length of that hashed value , and log this too.
+    then at the end log last 5 characters of this hashed value.
+    """ 
+    task="""
+    create a flow that fatches a joke from the chuck norris api 
+    then use this joke as input for computing md5  
+    log that joke.
+    compute length of that hashed value , and log this.
+    then log last 5 characters of hashed value.
+    """ 
 
     if len(sys.argv) > 1:
         task = sys.argv[1]

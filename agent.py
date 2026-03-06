@@ -30,24 +30,23 @@ Use these definitions to construct the `data` and `configData` for each node cor
    
 2.  **Strict Schema Compliance**: The output must validly parse into the `Flow` Pydantic model.
 3.  **Node IDs**: Generate 4 digit unique IDs for nodes and then prefixed with 'dndnode_'(e.g.: dndnode_<1111>).
-5.  **Logical Flow**: Ensure the nodes are connected in a logical order described by the user (or implied).
-6.  **Start & End**: Most flows should have a Start and End node unless specified otherwise.
-7.  **Inputs & Outputs under each Node's data key**:
+4.  **Logical Flow**: Ensure the nodes are connected in a logical order described by the user (or implied).
+5.  **Start & End**: Most flows should have a Start and End node unless specified otherwise.
+6.  **Inputs & Outputs under each Node's data key**:
     *   You MUST populate `node.data.inputs` and `node.data.outputs` for EVERY node. These are the incoming and outgoing SocketNames of that node.
     *   You can find these from the `inputs` and `outputs` sections of the "Available Node Definitions" YAML and put them into lists.    
     *   This field is REQUIRED. You MUST NOT omit it.
     *   If a node truly has no inputs or outputs in its definition, ONLY THEN use `[]`.
     *   If the node is "Logic" node, then pay a close attention on the configurable additional sockets. and update them accordingly here. 
 
-8.  **Edge Handles**: For EVERY edge, you MUST populate `sourceHandle` and `targetHandle` using the format `{{SocketName}}#undefined{{source|target}}`.
+7.  **Edge Handles**: For EVERY edge, you MUST populate `sourceHandle` and `targetHandle` using the format `{{SocketName}}#undefined{{source|target}}`.
     *   Identify the socket names you are connecting.
     *   Example: Start Node (`_Data` output) -> Log Node (`_In` input).
         - `sourceHandle` = `_Data#undefinedsource`
         - `targetHandle` = `_In#undefinedtarget`
     *   Ensure the SocketName used exists in the corresponding node's definitions.
 
-
-9. **Parallel Execution Order**:
+8. **Parallel Execution Order**:
     *   If a single node has MULTIPLE outgoing edges (parallel execution), and <<<"if there is a need to define an execution order for parallel execution">>> then you MUST define an execution order.
     *   Add a `data` field to the edge: `"data": {{"order": 1}}`, `"data": {{"order": 2}}`, etc.
     *   Example: Node A connects to Node B and Node C.
@@ -55,14 +54,34 @@ Use these definitions to construct the `data` and `configData` for each node cor
         - Edge A->C: `"data": {{"order": 2}}`
     *   This is CRITICAL for parallel flows.
 
+9. **Code (Python or Groovy) in Logic Node**: 
+    *   If logic needs to be writte in python code, then use `in_sockets[<name_of_input_socket>]` to access the input socket and `out_sockets[<name_of_output_socket>]` to access the output socket.
+    *   But If logic needs to be writte in groovy code, then directly use name_of_input_sockets and name_of_output_sockets to access the input and output sockets.
+    *   Example python code: `#python\nout_sockets["out"]="hi "+in_sockets["inp"]`
+    *   Example groovy code: `out = "hi "+inp`
+    *   if you find input socket as a json object, its actually a dict object in python. So you can access the fields of the dict object using the dot notation directly.
 
-10. **Python Code in Logic Node**: 
-    *   If logic needs to be writte in python code, then you MUST write the logic in the `logic` field.
-    *   use in_sockets[<name_of_input_socket>] to access the input socket and out_sockets[<name_of_output_socket>] to access the output socket.
-    *   - Example: `#python\nout_sockets["out"]="hi"+in_sockets["inp"]`
-        - Example: `#python\nout_sockets["out"]=in_sockets["inp"].value`
-        - Example: `#python\nout_sockets["out"]=in_sockets["inp1"]+in_sockets["inp2"]`
-        - Example: `#python\nout_sockets["out"]=len(in_sockets["inp"].value)`
+10. **configuration/creation of Input Parameters**:
+    *   When in the task, user requests inputs that are provided at flow run time (e.g. taking input from user, user-provided config, API keys, or values to use in Logic), you MUST add an `inputParameters` object (parallel to `nodes` and `edges`).
+    *   Example inputParameters object:
+    `"inputParameters": {{"input_string_1": {{"name": "input_string_1", "inputType": "string", "inputRequired": false, "value": "hello from user"}}}}`
+    *   The key of the input parameter is the name of the input parameter. (e.g. `input_string_1`)
+    *   The value of the input parameter is a dictionary with the following keys: `name`, `inputType`, `inputRequired`, `value`.
+    *   The `name` key is the name of the input parameter. (e.g. `input_string_1`)
+    *   The `inputType` key is the type of the input parameter. (e.g. `"string"`, `"int"`, `"float"`, `"boolean"`)
+    *   The `inputRequired` key is a boolean value indicating if the input parameter is required. (e.g. `false`)
+    *   The `value` key is the default value of the input parameter. (e.g. `"hello from user"`)
+
+11. **Referring to the configured Input Parameters in Nodes**:
+    *   **Important note**: if you have created an input parameter, then you need to refer it in the nodes using the name of the input parameter. 
+    *   This is differnt then the input sockets of the nodes. Input sockets are the sockets that are already defined in the nodes. Input parameters are the parameters that are created by you.
+    **Rules to refer the input parameter in the nodes**:
+        *   In nodes like Logic node code, these created input parameters can be referred using the key of the input parameter.
+        *   to refer a input parameter you created in groovy code via: `flowStore['inputParameters']['<input_parameter_name>'].value` (e.g. `flowStore['inputParameters']['input_string_1'].value`).
+        *   to refer a input parameter you created in python code via: `env['flowStore']['inputParameters']['<input_parameter_name>']['value']` (e.g. `env['flowStore']['inputParameters']['input_string_1']['value']`).
+        *   Example python code: `#python\nout_sockets["out"]="hi "+env['flowStore']['inputParameters']['input_string_1']['value']`
+        *   Example groovy code: `out = "hi "+flowStore['inputParameters']['input_string_1'].value`
+
 
 """
 
@@ -209,16 +228,32 @@ def post_process_flow(flow_dict):
         }
         new_edges.append(new_edge)
         
-    # 3. Construct Final Dict
+    # 3. Enrich inputParameters: add id (UUID) to each param for FinalFlow schema; keep name, inputType, inputRequired, value
+    raw_input_params = flow_dict.get("inputParameters") or {}
+    input_params = {}
+    for key, param in raw_input_params.items():
+        if isinstance(param, dict):
+            input_params[key] = {
+                "id": str(uuid.uuid4()),
+                "name": param.get("name", key),
+                "inputType": param.get("inputType", "string"),
+                "inputRequired": bool(param.get("inputRequired", False)),
+                "value": param.get("value"),
+            }
+        else:
+            input_params[key] = param
+
+    # 4. Construct Final Dict
     final_flow = {
         "nodes": new_nodes,
         "edges": new_edges,
+        "inputParameters": input_params,
         "position": [0, 0],
-        "zoom": 1,
+        "zoom": 1.0,
         "viewport": {
-            "x": 0,
-            "y": 0,
-            "zoom": 1
+            "x": 0.0,
+            "y": 0.0,
+            "zoom": 1.0
         }
     }
         
@@ -248,24 +283,59 @@ if __name__ == "__main__":
     #             and then simply write a single logic to concatinate those two jokes (use .value to get only the joke from the response json) . 
     #             at the end log this final concatinated joke."""
 
-    task = """Create a flow that fetches a joke from the Chuck Norris API (REST interface) 
-    and then simply write the logic to get the length of the joke from the response json(use .value to get only the joke from the response json). 
-    and then if the length is greater than 100, then log 'Joke is too long' otherwise log 'Joke is short'.""" 
+    # task = """Create a flow that fetches a joke from the Chuck Norris API (REST interface) 
+    # and then simply write the logic to get the length of the joke from the response json(use .value to get only the joke from the response json). 
+    # and then if the length is greater than 100, then log 'Joke is too long' otherwise log 'Joke is short'.""" 
 
-    task="""
-    create a flow that fatches a joke from the chuck norris api 
-    and then consider the joke string as an input for computing md5 hash of that joke 
-    and also log that joke.
-    then compute length of that hashed value , and log this too.
-    then at the end log last 5 characters of this hashed value.
-    """ 
+    # task = """Create a flow that fetches a joke from the Chuck Norris API. 
+    # Use a Logic node to get the joke string from the response (use .value). 
+    # Then use an If node: if the length of the joke is greater than 80, log 'Long joke' and send to End; 
+    # otherwise log 'Short joke' and send to End. Both branches must reach the End node."""
+
+    # task=""" 
+    # create a flow that fatches a joke from the chuck norris api 
+    # and then consider the joke string as an input for computing md5 hash of that joke 
+    # and also log that joke.
+    # then compute length of that hashed value , and log this too.
+    # then at the end log last 5 characters of this hashed value.
+    # """ 
+
     task="""
     create a flow that fatches a joke from the chuck norris api 
     then use this joke as input for computing md5  
     log that joke.
     compute length of that hashed value , and log this.
     then log last 5 characters of hashed value.
-    """ 
+    """
+#--------------------------------------------------------------------------------------------------
+
+    task = """Create a flow that GETs https://api.github.com/repos/microsoft/vscode. 
+    In a Logic node extract stargazers_count. Log that number. 
+    Then an If node: if stargazers_count > 100000 log 'Very popular' and go to End; 
+    else another If: if stargazers_count > 50000 log 'Popular' and go to End, 
+    else log 'Moderate' and go to End. 
+    All three branches must reach the same End. 
+    Use _True and _False handles correctly."""
+
+    task = """Create a flow that GETs https://api.github.com/repos/reclosedev/pyautocad. 
+    extract stargazers_count. Log that number. 
+    if stargazers_count > 100000 log 'Very popular', 
+    if stargazers_count > 50000 log 'Popular', 
+    else log 'Moderate'. """
+
+    task = """Create a flow that fetches in parallel: https://jsonplaceholder.typicode.com/posts/1 and https://jsonplaceholder.typicode.com/posts/2 (order 1 and 2). 
+    One Logic node with two inputs (p1, p2) that extracts title from each and returns the combined string 'Post1: <title1> | Post2: <title2>'. 
+    Log that string. 
+    Then an If node: if the combined string length > 50 log 'Long titles' else log 'Short titles'. Both to End."""
+
+    task = """Create a flow that GETs https://api.github.com/repos/python/cpython. 
+    In Logic extract : full_name, stargazers_count, and default_branch. 
+    Format one string 'Repo: <full_name>, Stars: <stargazers_count>, Branch: <default_branch>' and output it. 
+    Log that string. 
+    Then in a second Logic compute the length of that string; If length > 40 log 'Long summary' else log 'Short summary'. Both paths to End."""
+
+    task = """"Create a flow that takes a user provided input string and then calculate its md5 and log this."""  
+
 
     if len(sys.argv) > 1:
         task = sys.argv[1]

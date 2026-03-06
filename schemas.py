@@ -1,8 +1,5 @@
 from typing import List, Dict, Any, Optional, Union, Literal
 from pydantic import BaseModel, Field
-
-# --- Final Output Models (for Validation) ---
-
 class FinalPosition(BaseModel):
     x: float
     y: float
@@ -14,9 +11,8 @@ class FinalNodeConfigData(BaseModel):
     incomingSockets: Optional[str] = None
     outgoingSockets: Optional[str] = None
     logic: Optional[str] = None
-    message: Optional[str] = None # For Core:Log
-    expression: Optional[str] = None # For Core:If
-    # HTTP Request fields
+    message: Optional[str] = None
+    expression: Optional[str] = None
     mode: Optional[str] = None
     endpoint: Optional[str] = None
     method: Optional[str] = None
@@ -47,8 +43,8 @@ class FinalConfigSchemaItem(BaseModel):
     options: Optional[List[str]] = None
 
 class FinalNodeData(BaseModel):
-    inputs: List[str] #= Field(default_factory=list)
-    outputs: List[str]#= Field(default_factory=list)
+    inputs: List[str]
+    outputs: List[str]
     nodeName: str
     title: str
     configData: FinalNodeConfigData
@@ -65,7 +61,7 @@ class FinalNodeStyle(BaseModel):
 
 class FinalNode(BaseModel):
     id: str
-    type: Literal["custom"] = "custom"
+    type: str = "custom"
     initialized: bool = False
     position: FinalPosition
     data: FinalNodeData
@@ -74,28 +70,38 @@ class FinalNode(BaseModel):
 
 class FinalEdge(BaseModel):
     id: str
-    type: Literal["custom"] = "custom"
+    type: str = "custom"
     source: str
     target: str
     sourceHandle: Optional[str] = None
     targetHandle: Optional[str] = None
     data: Dict[str, Any] = Field(default_factory=dict)
     label: str = ""
-    # Coordinates are required for linear layout strategy
-    sourceX: float
-    sourceY: float
-    targetX: float
-    targetY: float
+    sourceX: float = 0.0
+    sourceY: float = 0.0
+    targetX: float = 0.0
+    targetY: float = 0.0
 
 class FinalViewport(BaseModel):
     x: float
     y: float
     zoom: float
 
+
+class InputParameterDef(BaseModel):
+    """Definition of a flow-level input parameter (id added in post_process with UUID). Refer in groovy: flowStore['inputParameters']['<name>'].value; in python: env['flowStore']['inputParameters']['<name>']['value']."""
+    id: str = Field(..., description="UUID assigned in post_process_flow")
+    name: str = Field(..., description="Parameter key/name (e.g. 'input_string_1')")
+    inputType: str = Field(..., description="Type: 'string', 'int', 'float', 'boolean'")
+    inputRequired: bool = Field(default=False, description="Whether the parameter is required")
+    value: Any = Field(..., description="Default/current value")
+
+
 class FinalFlow(BaseModel):
     task: Optional[str] = None
     nodes: List[FinalNode]
     edges: List[FinalEdge]
+    inputParameters: Optional[Dict[str, InputParameterDef]] = Field(default_factory=dict)
     position: List[float] = Field(default_factory=lambda: [0.0, 0.0])
     zoom: float = 1.0
     viewport: FinalViewport = Field(default_factory=lambda: FinalViewport(x=0.0, y=0.0, zoom=1.0))
@@ -123,6 +129,23 @@ class FlowEdge(BaseModel):
     targetHandle: str = Field(..., description="e.g., 'inp#undefinedtarget'")
     data: Optional[Dict[str, Any]] = Field(default_factory=dict, description="Edge metadata, e.g. {'order': 1} for execution order")
 
+
+class FlowInputParameterDef(BaseModel):
+    """LLM output: flow-level input parameter. Keys: name, inputType, inputRequired, value. id is added in post_process with UUID."""
+    name: str = Field(..., description="Parameter key/name (e.g. 'input_string_1')")
+    inputType: str = Field(..., description="Type: 'string', 'int', 'float', 'boolean'")
+    inputRequired: bool = Field(default=False, description="Whether the parameter is required")
+    value: Optional[Union[str, int, float, bool]] = Field(
+        default=None,
+        description="Default value (e.g. 'hello from user')"
+    )
+
+
 class Flow(BaseModel):
     nodes: List[FlowNode]
     edges: List[FlowEdge]
+    inputParameters: Optional[Dict[str, FlowInputParameterDef]] = Field(
+        default_factory=dict,
+        description="Flow-level input parameters. Key = parameter name; value = {name, inputType, inputRequired, value}. Refer in groovy: flowStore['inputParameters']['<name>'].value; in python: env['flowStore']['inputParameters']['<name>']['value']."
+    )
+

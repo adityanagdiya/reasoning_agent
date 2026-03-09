@@ -298,15 +298,20 @@ if __name__ == "__main__":
     # and also log that joke.
     # then compute length of that hashed value , and log this too.
     # then at the end log last 5 characters of this hashed value.
-    # """ 
-
+    # """
+    #  
     task="""
-    create a flow that fatches a joke from the chuck norris api 
-    then use this joke as input for computing md5  
-    log that joke.
-    compute length of that hashed value , and log this.
-    then log last 5 characters of hashed value.
+    create a flow that fetches a joke from the chuck norris api 
+    then log only that joke.
     """
+
+    # task="""
+    # create a flow that fetches a joke from the chuck norris api 
+    # then use this joke as input for computing md5  
+    # log that joke.
+    # compute length of that hashed value , and log this.
+    # then log last 5 characters of hashed value.
+    # """
 #--------------------------------------------------------------------------------------------------
 
     task = """Create a flow that GETs https://api.github.com/repos/microsoft/vscode. 
@@ -334,7 +339,7 @@ if __name__ == "__main__":
     Log that string. 
     Then in a second Logic compute the length of that string; If length > 40 log 'Long summary' else log 'Short summary'. Both paths to End."""
 
-    task = """"Create a flow that takes a user provided input string and then calculate its md5 and log this."""  
+    task = "Create a flow that takes a user provided input string and then calculate its md5 and log this."  
 
 
     if len(sys.argv) > 1:

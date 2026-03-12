@@ -1,0 +1,102 @@
+Nodes:
+  Start:
+    description: |
+      The entry point of a flow.
+
+      This node initializes the flow execution. It receives the initial
+      triggering document and provides it to the flow via the _Data output.
+
+      Returns:
+        _Data (any): The initial document that triggered the flow.
+
+      Config:
+        label (string): A descriptive label for this start node.
+        notes (string): Additional documentation or notes about this flow's entry.
+    group: Basic
+    action: ""
+    inputs: {}
+    outputs:
+      _Data: any
+    config:
+      - label: Label
+        name: label
+        type: string
+      - label: Notes
+        name: notes
+        type: string
+        rows: 5
+
+  End:
+    description: |
+      A termination point of a flow.
+
+      This node marks the end of a flow execution path. It collects data from
+      the _Data input to be included in the flow's final output or result.
+
+      Args:
+        _Data (any): The data to be returned as part of the flow execution result.
+
+      Config:
+        label (string): A descriptive label for this end node.
+        notes (string): Additional documentation or notes about this flow's exit.
+    group: Basic
+    action: ""
+    inputs:
+      _Data: any
+    outputs: {}
+    config:
+      - label: Label
+        name: label
+        type: string
+      - label: Notes
+        name: notes
+        type: string
+        rows: 5
+
+  Logic:
+    description: |
+      Executes custom Groovy or Python logic.
+
+      This node allows for complex data transformation or custom operations
+      by executing a script. It supports dynamic input and output sockets.
+
+      Args:
+        inp (any): Default input socket. Additional sockets can be configured.
+
+      Returns:
+        out (any): Default output socket. Additional sockets can be configured.
+
+      Config:
+        label (string): A descriptive label for this logic node.
+        notes (string): Additional documentation or notes about the script's logic.
+        incomingSockets (string): Comma-separated list of input socket names.
+        outgoingSockets (string): Comma-separated list of output socket names.
+        logic (string): The script to execute. Starts with `#python` for Python,
+          otherwise defaults to Groovy.
+    group: Basic
+    action: ''
+    inputs:
+      inp: any
+    outputs:
+      out: any
+    config:
+      - label: Label
+        name: label
+        type: string
+      - label: Notes
+        name: notes
+        type: string
+        rows: 5
+      - label: Incoming Sockets
+        name: incomingSockets
+        type: string
+        rows: 2
+        defaultValue: inp
+      - label: Outgoing Sockets
+        name: outgoingSockets
+        type: string
+        rows: 2
+        defaultValue: out
+      - label: Logic
+        name: logic
+        type: editor

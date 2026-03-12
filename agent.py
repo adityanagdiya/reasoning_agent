@@ -1,27 +1,190 @@
 # The Agent
 import yaml
 import json
+import re
 import uuid
 from agno.agent import Agent #, RunResponse
 from agno.models.ollama import Ollama
 from schemas import Flow, FinalFlow
 
-# Load Node Definitions
-def load_node_definitions():
-    with open("all_six_nodes_definition.yaml", "r") as f:
-        return f.read()
+# ---------------------------------------------------------------------------
+# Dynamic node definitions from JSON (with optional fallback for Start/End/Logic)
+# ---------------------------------------------------------------------------
 
-node_definitions = load_node_definitions()
+def load_dynamic_node_definitions(json_path: str) -> dict:
+    """
+    Load node definitions from the dynamic JSON.
+    JSON is expected to have key 'Nodes' (array of objects with 'content' containing YAML).
+    Each node in the content YAML may include group, action, inputs, outputs, config,
+    and description (used for relevance selection and passed through to the flow generator).
+    Returns a flat dict: node_name -> node_definition (for building YAML).
+    """
+    with open(json_path, "r", encoding="utf-8") as f:
+        data = json.load(f)
+    nodes_array = data.get("Nodes", data.get("nodes", []))
+    merged = {}
+    for item in nodes_array:
+        content = item.get("content") or item.get("Content") or ""
+        if not content or not content.strip():
+            continue
+        try:
+            parsed = yaml.safe_load(content)
+            if not parsed:
+                continue
+            # Content YAML has top-level key "Nodes" with dict of node_name -> def
+            inner = parsed.get("Nodes", parsed.get("nodes", {}))
+            if isinstance(inner, dict):
+                for name, defn in inner.items():
+                    if name and isinstance(defn, dict):
+                        merged[str(name)] = defn
+        except yaml.YAMLError:
+            continue
+    return merged
 
 
-system_prompt = f"""
+def load_basic_nodes(yaml_path: str) -> dict:
+    """Load only the Nodes section from a YAML file (e.g. Start, End, Logic)."""
+    with open(yaml_path, "r", encoding="utf-8") as f:
+        parsed = yaml.safe_load(f)
+    return parsed.get("Nodes", parsed.get("nodes", {})) or {}
+
+
+def merge_basic_into_dynamic(all_nodes: dict, basic_yaml_path: str) -> dict:
+    """
+    Ensure Start, End, and Logic exist in the node catalog (from static YAML if missing).
+    """
+    basic = load_basic_nodes(basic_yaml_path)
+    for key in ("Start", "End", "Logic"):
+        if key not in all_nodes and key in basic:
+            all_nodes[key] = basic[key]
+    return all_nodes
+
+
+def _select_relevant_nodes_heuristic(task: str, all_nodes: dict) -> list[str]:
+    """Keyword-based fallback when LLM selection is not used or fails."""
+    mandatory = ["Start", "End", "Logic"]
+    task_lower = task.lower()
+    selected = [n for n in mandatory if n in all_nodes]
+    available = [n for n in all_nodes if n not in mandatory]
+    # Simple keyword hints for common nodes
+    keywords = {
+        "Core:Log": ["log", "logging", "print", "output"],
+        "Core:HTTPRequest": ["http", "api", "fetch", "get", "post", "request", "rest", "url"],
+        "Core:If": ["if", "condition", "branch", "check", "greater", "less", "compare"],
+        "Core:Expression": ["expression", "eval"],
+        "Core:ApplyExpression": ["apply", "expression"],
+        "Core:Join": ["join", "merge"],
+        "Core:MD5": ["md5", "hash"],
+        "Core:Template": ["template"],
+        "Core:SendEmail": ["email", "mail"],
+        "Core:JsonResponse": ["json", "response"],
+    }
+    for name in available:
+        for kw, terms in keywords.items():
+            if name == kw and any(t in task_lower for t in terms):
+                if name not in selected:
+                    selected.append(name)
+                break
+    # If no specific match, add Logic and a few common ones for generic tasks
+    if "Logic" not in selected and "logic" in task_lower:
+        selected.append("Logic")
+    if "Core:Log" not in selected:
+        selected.append("Core:Log")
+    if "Core:HTTPRequest" not in selected and any(x in task_lower for x in ["http", "api", "fetch"]):
+        selected.append("Core:HTTPRequest")
+    if "Core:If" not in selected and any(x in task_lower for x in ["if", "condition", "branch"]):
+        selected.append("Core:If")
+    return selected[:30]
+
+
+def select_relevant_node_names(task: str, all_nodes: dict, model) -> list[str]:
+    """
+    Select which node names are relevant for the given task.
+    Always includes Start, End, and Logic if present in all_nodes.
+    Uses the provided model for a short selection call when possible.
+    """
+    mandatory = ["Start", "End", "Logic"]
+    available = [n for n in all_nodes if n not in mandatory]
+    if not available:
+        return [n for n in mandatory if n in all_nodes]
+    print("*********available*********",available)
+
+    # Build a short hint per node (group, action) for better selection
+    hints = []
+    for name in available:
+        defn = all_nodes.get(name, {})
+        group = defn.get("group", "")
+        action = defn.get("action", "")
+        desc = defn.get("description", "")
+        hint = name
+        print("*********name*********",name)
+        if group or action:
+            hint += f" (group={group}, action={action})"
+        if isinstance(desc, str) and desc.strip():
+            # Use first line or first 120 chars of description for relevance selection
+            first_line = desc.strip().split("\n")[0].strip()
+            hint += " " + (first_line[:120] + "..." if len(first_line) > 120 else first_line)
+        hints.append(hint)
+        print("*********hint*********",hint)
+    
+
+    prompt = f"""You are a flow design assistant. Given the task below and the list of available nodes, output ONLY a comma-separated list of node names that are needed to implement this task. Do not include any explanation.
+
+Rules:
+- Always include Start and End.
+- Include Logic if the task needs custom code, expressions, or data transformation.
+- Include only nodes that are clearly relevant (e.g. HTTP request, Log, If, etc.).
+
+Task:
+{task[:2000]}
+
+Available nodes (name and optional hint):
+{chr(10).join(hints[:200])}
+
+Reply with only the comma-separated node names, nothing else."""
+
+    try:
+        selector_agent = Agent(model=model, instructions="Reply with only the requested list, no explanation.", debug_mode=True)
+        response = selector_agent.run(prompt)
+        text = (response.content if hasattr(response, "content") else str(response)).strip()
+        # Parse comma-separated names; allow newlines and extra spaces
+        names = [n.strip().strip("'\"") for n in re.split(r"[,;\n]+", text) if n.strip()]
+        seen = set()
+        selected = []
+        for n in names:
+            if n in all_nodes and n not in seen:
+                seen.add(n)
+                selected.append(n)
+        for m in mandatory:
+            if m in all_nodes and m not in seen:
+                if m == "Start":
+                    selected.insert(0, m)
+                else:
+                    selected.append(m)
+        return selected if selected else _select_relevant_nodes_heuristic(task, all_nodes)
+    except Exception:
+        return _select_relevant_nodes_heuristic(task, all_nodes)
+
+
+def build_node_definitions_yaml(all_nodes: dict, selected_names: list[str]) -> str:
+    """Build a single YAML string containing only the selected node definitions."""
+    subset = {k: all_nodes[k] for k in selected_names if k in all_nodes}
+    if not subset:
+        return ""
+    doc = {"Nodes": subset}
+    return yaml.dump(doc, default_flow_style=False, sort_keys=False, allow_unicode=True)
+
+
+def get_system_prompt(node_definitions_yaml: str) -> str:
+    """Build the full system prompt with the given node definitions YAML."""
+    return f"""
 You are an expert Flow Generator for a low-code platform. Your task is to create a valid JSON structure for a flow based on the user's request.
 You must return the data strictly complying with the provided Pydantic schema for `Flow`.
 
 
 ### Available Node Definitions YAML
 Use these definitions to construct the `data` and `configData` for each node correctly.
-{node_definitions}
+{node_definitions_yaml}
 
 
 ### Rules
@@ -59,7 +222,8 @@ Use these definitions to construct the `data` and `configData` for each node cor
     *   But If logic needs to be writte in groovy code, then directly use name_of_input_sockets and name_of_output_sockets to access the input and output sockets.
     *   Example python code: `#python\nout_sockets["out"]="hi "+in_sockets["inp"]`
     *   Example groovy code: `out = "hi "+inp`
-    *   if you find input socket as a json object, its actually a dict object in python. So you can access the fields of the dict object using the dot notation directly.
+    *   If an input socket receives a value from an output socket containing a JSON object, this value is already a Python dictionary. **Do NOT use `json.loads()`** on it—it does not need to be parsed again.
+        For example, if an HTTPRequest node returns a JSON object, you can access its fields directly using dot or dictionary notation (e.g., `response.key` or `response["key"]`) in the subsequent node's logic code.
 
 10. **configuration/creation of Input Parameters**:
     *   When in the task, user requests inputs that are provided at flow run time (e.g. taking input from user, user-provided config, API keys, or values to use in Logic), you MUST add an `inputParameters` object (parallel to `nodes` and `edges`).
@@ -68,7 +232,7 @@ Use these definitions to construct the `data` and `configData` for each node cor
     *   The key of the input parameter is the name of the input parameter. (e.g. `input_string_1`)
     *   The value of the input parameter is a dictionary with the following keys: `name`, `inputType`, `inputRequired`, `value`.
     *   The `name` key is the name of the input parameter. (e.g. `input_string_1`)
-    *   The `inputType` key is the type of the input parameter. (e.g. `"string"`, `"int"`, `"float"`, `"boolean"`)
+    *   The `inputType` key is the type of the input parameter. (e.g. `"string"`, `"int"`, `"float"`, `"boolean", "file"`)
     *   The `inputRequired` key is a boolean value indicating if the input parameter is required. (e.g. `false`)
     *   The `value` key is the default value of the input parameter. (e.g. `"hello from user"`)
 
@@ -85,20 +249,39 @@ Use these definitions to construct the `data` and `configData` for each node cor
 
 """
 
-# Initialize Agent
-# Using the specific Ollama model requested by the user
-# which_model = "qwen3-coder-next-128k-custom:latest"
-which_model = "gpt-oss-120b-long-context:latest"
-# which_model = "gpt-oss-20b-long-context"
 
-agent = Agent(
-    model=Ollama(id=which_model, host="http://100.113.113.188:2802",  options = {"temperature":0.0}),
-    description="Agent for generating flow JSON",
-    instructions=system_prompt,
-    output_schema=Flow,
-    structured_outputs=True,
-    debug_mode=True
-)
+def create_agent_for_task(task: str, nodes_json_path: str = "all_nodes_dynamically_coming.json", basic_yaml_path: str = "basic_nodes_definition.yaml", which_model: str = "gpt-oss-120b-long-context:latest"):
+    """
+    Load dynamic nodes, select those relevant to the task, build prompt, and return an Agent.
+    """
+    all_nodes = load_dynamic_node_definitions(nodes_json_path)
+    print("*********all_nodes*********",all_nodes)
+    all_nodes = merge_basic_into_dynamic(all_nodes, basic_yaml_path)
+    if not all_nodes:
+        raise ValueError("No node definitions found. Check paths for JSON and basic YAML.")
+
+    # Use same Ollama for selection (lighter call)
+    ollama = Ollama(id=which_model, host="http://100.113.113.188:2802", options={"temperature": 0.0})
+    selected_names = select_relevant_node_names(task, all_nodes, ollama)
+    print("*********selected_names*********",selected_names)
+    node_yaml = build_node_definitions_yaml(all_nodes, selected_names)
+    print("*********node_yaml*********",node_yaml)
+    system_prompt = get_system_prompt(node_yaml)
+
+    return Agent(
+        model=ollama,
+        description="Agent for generating flow JSON",
+        instructions=system_prompt,
+        output_schema=Flow,
+        structured_outputs=True,
+        debug_mode=True,
+    )
+
+# Model and paths (can be overridden when calling create_agent_for_task)
+# which_model = "gpt-oss-120b-long-context:latest"#"gpt-oss-120b-long-context:latest" #glm-4.7-flash-long-context:latest
+which_model = "glm-4.7-flash-long-context:latest"
+nodes_json_path = "all_nodes_dynamically_coming.json"
+basic_yaml_path = "basic_nodes_definition.yaml"
 
 def _normalize_config_value(v):
     """Return None for empty or empty-JSON-string values; otherwise return the value."""
@@ -287,10 +470,10 @@ if __name__ == "__main__":
     # and then simply write the logic to get the length of the joke from the response json(use .value to get only the joke from the response json). 
     # and then if the length is greater than 100, then log 'Joke is too long' otherwise log 'Joke is short'.""" 
 
-    # task = """Create a flow that fetches a joke from the Chuck Norris API. 
-    # Use a Logic node to get the joke string from the response (use .value). 
-    # Then use an If node: if the length of the joke is greater than 80, log 'Long joke' and send to End; 
-    # otherwise log 'Short joke' and send to End. Both branches must reach the End node."""
+    task = """Create a flow that fetches a joke from the Chuck Norris API. 
+    Use a Logic node to get the joke string from the response (use .value). 
+    Then use an If node: if the length of the joke is greater than 80, log 'Long joke' and send to End; 
+    otherwise log 'Short joke' and send to End. Both branches must reach the End node."""
 
     # task=""" 
     # create a flow that fatches a joke from the chuck norris api 
@@ -300,10 +483,10 @@ if __name__ == "__main__":
     # then at the end log last 5 characters of this hashed value.
     # """
     #  
-    task="""
-    create a flow that fetches a joke from the chuck norris api 
-    then log only that joke.
-    """
+    # task="""
+    # create a flow that fetches a joke from the chuck norris api 
+    # then log only that joke.
+    # """
 
     # task="""
     # create a flow that fetches a joke from the chuck norris api 
@@ -314,24 +497,24 @@ if __name__ == "__main__":
     # """
 #--------------------------------------------------------------------------------------------------
 
-    task = """Create a flow that GETs https://api.github.com/repos/microsoft/vscode. 
-    In a Logic node extract stargazers_count. Log that number. 
-    Then an If node: if stargazers_count > 100000 log 'Very popular' and go to End; 
-    else another If: if stargazers_count > 50000 log 'Popular' and go to End, 
-    else log 'Moderate' and go to End. 
-    All three branches must reach the same End. 
-    Use _True and _False handles correctly."""
+    # task = """Create a flow that GETs https://api.github.com/repos/microsoft/vscode. 
+    # In a Logic node extract stargazers_count. Log that number. 
+    # Then an If node: if stargazers_count > 100000 log 'Very popular' and go to End; 
+    # else another If: if stargazers_count > 50000 log 'Popular' and go to End, 
+    # else log 'Moderate' and go to End. 
+    # All three branches must reach the same End. 
+    # Use _True and _False handles correctly."""
 
-    task = """Create a flow that GETs https://api.github.com/repos/reclosedev/pyautocad. 
-    extract stargazers_count. Log that number. 
-    if stargazers_count > 100000 log 'Very popular', 
-    if stargazers_count > 50000 log 'Popular', 
-    else log 'Moderate'. """
+    # task = """Create a flow that GETs https://api.github.com/repos/reclosedev/pyautocad. 
+    # extract stargazers_count. Log that number. 
+    # if stargazers_count > 100000 log 'Very popular', 
+    # if stargazers_count > 50000 log 'Popular', 
+    # else log 'Moderate'. """
 
-    task = """Create a flow that fetches in parallel: https://jsonplaceholder.typicode.com/posts/1 and https://jsonplaceholder.typicode.com/posts/2 (order 1 and 2). 
-    One Logic node with two inputs (p1, p2) that extracts title from each and returns the combined string 'Post1: <title1> | Post2: <title2>'. 
-    Log that string. 
-    Then an If node: if the combined string length > 50 log 'Long titles' else log 'Short titles'. Both to End."""
+    # task = """Create a flow that fetches in parallel: https://jsonplaceholder.typicode.com/posts/1 and https://jsonplaceholder.typicode.com/posts/2 (order 1 and 2). 
+    # One Logic node with two inputs (p1, p2) that extracts title from each and returns the combined string 'Post1: <title1> | Post2: <title2>'. 
+    # Log that string. 
+    # Then an If node: if the combined string length > 50 log 'Long titles' else log 'Short titles'. Both to End."""
 
     task = """Create a flow that GETs https://api.github.com/repos/python/cpython. 
     In Logic extract : full_name, stargazers_count, and default_branch. 
@@ -339,7 +522,7 @@ if __name__ == "__main__":
     Log that string. 
     Then in a second Logic compute the length of that string; If length > 40 log 'Long summary' else log 'Short summary'. Both paths to End."""
 
-    task = "Create a flow that takes a user provided input string and then calculate its md5 and log this."  
+    # task = "Create a flow that takes a user provided input string and then calculate its md5 and log this."  
 
 
     if len(sys.argv) > 1:
@@ -348,6 +531,7 @@ if __name__ == "__main__":
     print(f"Generating flow for task: {task}...")
     
     try:
+        agent = create_agent_for_task(task, nodes_json_path=nodes_json_path, basic_yaml_path=basic_yaml_path, which_model=which_model)
         response = agent.run(task)
         flow_data = response.content
         

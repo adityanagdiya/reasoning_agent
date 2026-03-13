@@ -121,9 +121,9 @@ def select_relevant_node_names(task: str, all_nodes: dict, model) -> list[str]:
         if group or action:
             hint += f" (group={group}, action={action})"
         if isinstance(desc, str) and desc.strip():
-            # Use first line or first 120 chars of description for relevance selection
+            # Use first line or first 200 chars of description for relevance selection
             first_line = desc.strip().split("\n")[0].strip()
-            hint += " " + (first_line[:120] + "..." if len(first_line) > 120 else first_line)
+            hint += " " + (first_line[:200] + "..." if len(first_line) > 200 else first_line)
         hints.append(hint)
         print("*********hint*********",hint)
     
@@ -201,15 +201,16 @@ Use these definitions to construct the `data` and `configData` for each node cor
     *   This field is REQUIRED. You MUST NOT omit it.
     *   If a node truly has no inputs or outputs in its definition, ONLY THEN use `[]`.
     *   If the node is "Logic" node, then pay a close attention on the configurable additional sockets. and update them accordingly here. 
+7.  **configData.label for every node**: Every node definition's `config` includes an item with `name: label` (display "Label"). You MUST set `node.data.configData.label` to a short, human-readable label for that node instance (e.g. "Start", "Log Joke", "HTTP Get Repo"). This field is REQUIRED for every node—do not omit it.
 
-7.  **Edge Handles**: For EVERY edge, you MUST populate `sourceHandle` and `targetHandle` using the format `{{SocketName}}#undefined{{source|target}}`.
+8.  **Edge Handles**: For EVERY edge, you MUST populate `sourceHandle` and `targetHandle` using the format `{{SocketName}}#undefined{{source|target}}`.
     *   Identify the socket names you are connecting.
     *   Example: Start Node (`_Data` output) -> Log Node (`_In` input).
         - `sourceHandle` = `_Data#undefinedsource`
         - `targetHandle` = `_In#undefinedtarget`
     *   Ensure the SocketName used exists in the corresponding node's definitions.
 
-8. **Parallel Execution Order**:
+9. **Parallel Execution Order**:
     *   If a single node has MULTIPLE outgoing edges (parallel execution), and <<<"if there is a need to define an execution order for parallel execution">>> then you MUST define an execution order.
     *   Add a `data` field to the edge: `"data": {{"order": 1}}`, `"data": {{"order": 2}}`, etc.
     *   Example: Node A connects to Node B and Node C.
@@ -217,7 +218,7 @@ Use these definitions to construct the `data` and `configData` for each node cor
         - Edge A->C: `"data": {{"order": 2}}`
     *   This is CRITICAL for parallel flows.
 
-9. **Code (Python or Groovy) in Logic Node**: 
+10. **Code (Python or Groovy) in Logic Node**: 
     *   If logic needs to be writte in python code, then use `in_sockets[<name_of_input_socket>]` to access the input socket and `out_sockets[<name_of_output_socket>]` to access the output socket.
     *   But If logic needs to be writte in groovy code, then directly use name_of_input_sockets and name_of_output_sockets to access the input and output sockets.
     *   Example python code: `#python\nout_sockets["out"]="hi "+in_sockets["inp"]`
@@ -225,7 +226,7 @@ Use these definitions to construct the `data` and `configData` for each node cor
     *   If an input socket receives a value from an output socket containing a JSON object, this value is already a Python dictionary. **Do NOT use `json.loads()`** on it—it does not need to be parsed again.
         For example, if an HTTPRequest node returns a JSON object, you can access its fields directly using dot or dictionary notation (e.g., `response.key` or `response["key"]`) in the subsequent node's logic code.
 
-10. **configuration/creation of Input Parameters**:
+11. **configuration/creation of Input Parameters**:
     *   When in the task, user requests inputs that are provided at flow run time (e.g. taking input from user, user-provided config, API keys, or values to use in Logic), you MUST add an `inputParameters` object (parallel to `nodes` and `edges`).
     *   Example inputParameters object:
     `"inputParameters": {{"input_string_1": {{"name": "input_string_1", "inputType": "string", "inputRequired": false, "value": "hello from user"}}}}`
@@ -236,7 +237,7 @@ Use these definitions to construct the `data` and `configData` for each node cor
     *   The `inputRequired` key is a boolean value indicating if the input parameter is required. (e.g. `false`)
     *   The `value` key is the default value of the input parameter. (e.g. `"hello from user"`)
 
-11. **Referring to the configured Input Parameters in Nodes**:
+12. **Referring to the configured Input Parameters in Nodes**:
     *   **Important note**: if you have created an input parameter, then you need to refer it in the nodes using the name of the input parameter. 
     *   This is differnt then the input sockets of the nodes. Input sockets are the sockets that are already defined in the nodes. Input parameters are the parameters that are created by you.
     **Rules to refer the input parameter in the nodes**:
@@ -278,8 +279,7 @@ def create_agent_for_task(task: str, nodes_json_path: str = "all_nodes_dynamical
     )
 
 # Model and paths (can be overridden when calling create_agent_for_task)
-# which_model = "gpt-oss-120b-long-context:latest"#"gpt-oss-120b-long-context:latest" #glm-4.7-flash-long-context:latest
-which_model = "glm-4.7-flash-long-context:latest"
+which_model = "gpt-oss-120b-long-context:latest"#"gpt-oss-120b-long-context:latest" #glm-4.7-flash-long-context:latest
 nodes_json_path = "all_nodes_dynamically_coming.json"
 basic_yaml_path = "basic_nodes_definition.yaml"
 
@@ -359,6 +359,9 @@ def post_process_flow(flow_dict):
             config_data_normalized = {k: _normalize_config_value(v) for k, v in config_data_raw.items()}
         else:
             config_data_normalized = {}
+        # Ensure label is always present (from node config); use title/nodeName if missing
+        if config_data_normalized.get("label") is None or config_data_normalized.get("label") == "":
+            config_data_normalized["label"] = title or node_name_raw or "Node"
         
         # Construct the enriched node
         new_node = {

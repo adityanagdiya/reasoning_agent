@@ -115,8 +115,8 @@ class NodeData(BaseModel):
     outputs: List[str] = Field(..., description="List of outgoing socket names")
     nodeName: str = Field(..., description="For logic: 'logic#<id>'. For others: the YAML key (e.g., 'Core:Log')")
     action: str = Field(..., description="Action to be performed by the node, use the 'action' value from the node's definition in Available Node Definitions YAML (e.g. log, httpRequest, executeIf, etc.).")
-    configData: Dict[str, Any] = Field(default_factory=dict, description="Configuration values from YAML")
-
+    configData: Dict[str, Any] = Field(default_factory=dict, description="Configuration values from YAML. MUST include 'label' for every node (short human-readable name for the node instance, e.g. 'Start', 'Log Joke') when the node's config has name: label.")
+        
 class FlowNode(BaseModel):
     id: str = Field(..., description="Unique string ID (e.g., 'n1')")
     data: NodeData

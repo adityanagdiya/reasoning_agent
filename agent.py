@@ -71,6 +71,7 @@ def _select_relevant_nodes_heuristic(task: str, all_nodes: dict) -> list[str]:
         "Core:Log": ["log", "logging", "print", "output"],
         "Core:HTTPRequest": ["http", "api", "fetch", "get", "post", "request", "rest", "url"],
         "Core:If": ["if", "condition", "branch", "check", "greater", "less", "compare"],
+        "Core:Repeat": ["loop", "repeat", "times", "n times", "iterat"],
         "Core:Expression": ["expression", "eval"],
         "Core:ApplyExpression": ["apply", "expression"],
         "Core:Join": ["join", "merge"],
@@ -94,6 +95,8 @@ def _select_relevant_nodes_heuristic(task: str, all_nodes: dict) -> list[str]:
         selected.append("Core:HTTPRequest")
     if "Core:If" not in selected and any(x in task_lower for x in ["if", "condition", "branch"]):
         selected.append("Core:If")
+    if "Core:Repeat" not in selected and any(x in task_lower for x in ["loop", "repeat", " times"]):
+        selected.append("Core:Repeat")
     return selected[:30]
 
 
@@ -132,9 +135,13 @@ def select_relevant_node_names(task: str, all_nodes: dict, model) -> list[str]:
 
 Rules:
 - Always include Start and End.
-- Always include Logic if it appears in the catalog: Logic is the node for arbitrary Python/Groovy (including large end-to-end scripts, NLP, loops, merging data, validation). Use it whenever the task needs behavior that is not a single built-in node.
+- Always include Logic if it appears in the catalog: Logic is the node for arbitrary Python/Groovy. Use it whenever the task needs behavior that is not a single built-in node.
 - Include Logic especially when the user asks for "logic node", "custom code", "in Python", "transform", "filter", "analyze", or "write the whole code".
+- Include Core:Repeat when the task says "loop", "repeat", "N times", "do this 10 times", or "n times (user provided)".
+- Include Core:If when the task has conditional branching (if/else, "if X then ... otherwise ...", "greater than", etc.).
 - Include only other nodes that are clearly relevant (e.g. HTTP request, Log, If, etc.).
+- Do NOT include Core:JSON2MAP when the task involves HTTP/API request and then processing the response in Logic or custom code. In that case the HTTP response is already provided as a dict/map to Logic—parsing JSON is unnecessary.
+
 
 Task:
 {task[:2000]}
@@ -162,6 +169,9 @@ Reply with only the comma-separated node names, nothing else."""
                     selected.insert(0, m)
                 else:
                     selected.append(m)
+        # When both HTTP and Logic are selected, exclude Core:JSON2MAP—HTTP response is already a dict for Logic
+        if "Core:HTTPRequest" in selected and "Logic" in selected and "Core:JSON2MAP" in selected:
+            selected = [n for n in selected if n != "Core:JSON2MAP"]
         return selected if selected else _select_relevant_nodes_heuristic(task, all_nodes)
     except Exception:
         return _select_relevant_nodes_heuristic(task, all_nodes)
@@ -211,6 +221,29 @@ Use these definitions to construct the `data` and `configData` for each node cor
         - `targetHandle` = `_In#undefinedtarget`
     *   Ensure the SocketName used exists in the corresponding node's definitions.
 
+8b. **Fan-out from one output (logging vs further operations)**: A single node's output socket MAY have MULTIPLE outgoing edges (two or more branches). Use this when the task requires BOTH "log X" AND "use X for further operations":
+    *   **Correct**: From the same output socket (e.g. `joke` of "Extract Joke"), create TWO edges: one to the Log node (for logging only) and one to the next processing node (e.g. "Compute Length"). So: Extract Joke --[joke]--> Log Joke, and Extract Joke --[joke]--> Compute Length. Both edges share the same source and sourceHandle; targets differ.
+    *   **Wrong**: Do NOT put the Log node in the middle of the pipeline (e.g. Extract Joke -> Log Joke -> Compute Length). That would make "Compute Length" receive the Log node's output instead of the original data. Log is for side-effect (logging) only; the "further operations" branch must receive data directly from the node that produced it.
+    *   Summary: one out_socket can have 2 (or more) branches—one for logging, one (or more) for further operations.
+
+8c. **Conditional branching (Core:If) — mandatory both branches**:
+    *   Core:If has exactly ONE input `_Data` (the value to evaluate, e.g. length) and TWO outputs `_True` and `_False`. Use the socket names exactly as in the node definition.
+    *   Connect the value to test to If._Data only (e.g. Compute Length.len → If._Data). Do NOT add a second "control flow" or "_In" input to the If node; it only has _Data.
+    *   Connect If._True to the "true" branch node (e.g. "Log Too Long") and If._False to the "false" branch node (e.g. "Log Short"). You MUST create edges for BOTH _True and _False; do not skip either branch.
+    *   Set `configData.expression` to a Groovy expression that evaluates to boolean (e.g. `_Data > 100` for length > 100).
+    *   When the If is inside a loop: BOTH branch nodes (Log Too Long and Log Short) must have their output connected back to the Repeat node's _SubflowResult_ input (see Rule 8d). If only one branch connects back, the loop will run the wrong number of times or hang.
+
+8d. **Loop (Core:Repeat) — "do N times" / "in a loop"**:
+    *   When the task says "do this N times", "repeat 10 times", or "in a loop" (with N fixed or from an input parameter), use Core:Repeat. Its inputs are _Data and _SubflowResult_; outputs are _Result and _Subflow.
+    *   Wire: Start._Data → Repeat._Data. Set configData.count to the number (e.g. 10) or the name of an input parameter if "n is user provided".
+    *   Loop body entry: Connect Repeat._Subflow → the first node of the loop body (e.g. Fetch Joke._Data). Everything that must run each iteration (fetch, extract, log, compute, If, Log Too Long / Log Short) is inside the loop.
+    *   **Critical — ONLY the end of each iteration path connects to _SubflowResult_**: Repeat._SubflowResult_ must receive exactly ONE signal per iteration. 
+    So ONLY the terminal nodes of the loop body (the very last step on each path) may have an edge to Repeat._SubflowResult_. 
+    When the body has an If with two branches, ONLY the two branch endpoints connect back: Log Too Long._Out → Repeat._SubflowResult_ AND Log Short._Out → Repeat._SubflowResult_. 
+    No other node in the loop (e.g. Log Joke, Log Length, Compute Length, If/Length Check, Fetch Joke, Extract Joke) must connect to Repeat._SubflowResult_. 
+    If Log Joke, Log Length, or any intermediate node also connects to _SubflowResult_, the Repeat node will count each of those as an extra iteration and the loop will run 2n or 3n times instead of n.
+    *   When the loop is done: Connect Repeat._Result → End._Data. So the flow is: Start → Repeat → [loop body: ... → If → (Log Too Long | Log Short) → only these two back to Repeat] → after N iterations Repeat._Result → End.
+
 9. **Parallel Execution Order**:
     *   If a single node has MULTIPLE outgoing edges (parallel execution), and <<<"if there is a need to define an execution order for parallel execution">>> then you MUST define an execution order.
     *   Add a `data` field to the edge: `"data": {{"order": 1}}`, `"data": {{"order": 2}}`, etc.
@@ -220,7 +253,7 @@ Use these definitions to construct the `data` and `configData` for each node cor
     *   This is CRITICAL for parallel flows.
 
 10. **Logic node — generalized (read carefully; most failures are here)**:
-    **Role**: Logic runs arbitrary scripts. Tasks differ widely (API shaping, scoring, multi-step transforms, loops). Put the **full behavior** in Logic when the user asks for custom Python or "whole working code"—do **not** replace with one-line placeholders or trivial keyword checks unless the user explicitly wants a stub.
+    **Role**: Logic runs arbitrary scripts. Tasks differ widely (API shaping, scoring, multi-step transforms). 
     **Flow shape**:
     *   **Thin flow, fat Logic** is valid: Start → (optional HTTP / inputs) → **one Logic node with complete Python** → Log / End when most of the work is custom computation.
     *   Use **multiple** Logic nodes only when the graph must branch or when distinct stages feed different downstream nodes—not to avoid writing a longer script.
@@ -232,31 +265,55 @@ Use these definitions to construct the `data` and `configData` for each node cor
     *   Example groovy (minimal): `out = "hi "+inp`
     **Large / end-to-end scripts**:
     *   The `logic` string may be long (helpers, try/except, full pipelines). That is expected. must include **complete, runnable** logic—not comments like "placeholder for NLP".
-    **Data from upstream nodes**:
-    *   JSON from HTTP (or similar) is already a Python **dict** in Logic. **Do NOT use `json.loads()`** on it. Use `obj["key"]` or safe `.get()`.
-    **Runtime config**: use `inputParameters` and in Python `env['flowStore']['inputParameters']['<name>']['value']` when the user asks for user-provided keys or config (see rules 11–12).
+    **No need to parsejson**:
+    *   JSON from HTTP (or similar nodes) is already automaticaly converted to a Python **dict** or map internally. 
+    *   So Do NOT use `json.loads()`** on it. Use `obj["key"]` or safe `.get()`. 
+    *   and also do not use Core:JSON2MAP node before this logic node in this flow as well.
 
-11. **configuration/creation of Input Parameters**:
-    *   When in the task, user requests inputs that are provided at flow run time (e.g. taking input from user, user-provided config, API keys, or values to use in Logic), you MUST add an `inputParameters` object (parallel to `nodes` and `edges`).
-    *   Example inputParameters object:
-    `"inputParameters": {{"input_string_1": {{"name": "input_string_1", "inputType": "string", "inputRequired": false, "value": "hello from user"}}}}`
-    *   The key of the input parameter is the name of the input parameter. (e.g. `input_string_1`)
-    *   The value of the input parameter is a dictionary with the following keys: `name`, `inputType`, `inputRequired`, `value`.
-    *   The `name` key is the name of the input parameter. (e.g. `input_string_1`)
-    *   The `inputType` key is the type of the input parameter. (e.g. `"string"`, `"int"`, `"float"`, `"boolean", "file"`)
-    *   The `inputRequired` key is a boolean value indicating if the input parameter is required. (e.g. `false`)
-    *   The `value` key is the default value of the input parameter. (e.g. `"hello from user"`)
+**Runtime config**: use `inputParameters` and in Python `env['flowStore']['inputParameters']['<name>']['value']` when the user asks for user-provided keys or config (see rules 11–12).
 
-12. **Referring to the configured Input Parameters in Nodes**:
-    *   **Important note**: if you have created an input parameter, then you need to refer it in the nodes using the name of the input parameter. 
-    *   This is differnt then the input sockets of the nodes. Input sockets are the sockets that are already defined in the nodes. Input parameters are the parameters that are created by you.
-    **Rules to refer the input parameter in the nodes**:
-        *   In nodes like Logic node code, these created input parameters can be referred using the key of the input parameter.
-        *   to refer a input parameter you created in groovy code via: `flowStore['inputParameters']['<input_parameter_name>'].value` (e.g. `flowStore['inputParameters']['input_string_1'].value`).
-        *   to refer a input parameter you created in python code via: `env['flowStore']['inputParameters']['<input_parameter_name>']['value']` (e.g. `env['flowStore']['inputParameters']['input_string_1']['value']`).
-        *   Example python code: `#python\nout_sockets["out"]="hi "+env['flowStore']['inputParameters']['input_string_1']['value']`
-        *   Example groovy code: `out = "hi "+flowStore['inputParameters']['input_string_1'].value`
+11. **Configuration / Creation of Input Parameters**:
+    *   When a task requires values that are provided at flow run time (for example: user input, configuration values, API keys, or values used in logic), you must create an inputParameters object.
+    *   The inputParameters object should be defined at the same level as nodes and edges.
+    *   The key of each parameter must be the name of the input parameter.
+    Example:
+    *   "inputParameters": {{
+           "input_string_1": {{
+            "name": "input_string_1",
+            "inputType": "string",
+            "inputRequired": false,
+            "value": "hello from user"
+            }}
+        }}
+    *   Each parameter value must contain the following fields:
+        *   name: Name of the input parameter	example: "input_string_1"
+        *   inputType: Data type of the input	example: "string", "int", "float", "boolean", "file"
+        *   inputRequired: Indicates whether the parameter is required	example: true / false
+        *   value: Default value	example: "hello from user"
 
+12. **Using Created Input Parameters in Nodes**:
+    *   Important:If you create an input parameter, it must be used somewhere in the nodes.
+    *   Also note:
+        *   Input parameters are different from node input sockets.
+        *   Input sockets are predefined in nodes.
+        *   Input parameters are custom parameters created by you.
+    
+    **Using Input Parameters in Logic Nodes**:
+    *   In Groovy
+        *   Access the value using: `flowStore['inputParameters']['<input_parameter_name>'].value`
+        *   Example: `out = "hi " + flowStore['inputParameters']['input_string_1'].value`
+    *   In Python
+        *   Access the value using: `env['flowStore']['inputParameters']['<input_parameter_name>']['value']`
+        *   Example: `out = "hi " + env['flowStore']['inputParameters']['input_string_1']['value']`
+        
+    **Using Input Parameters in Node as an Expression**:
+    *   Case 1 — When in the node it's config key label is $Expression
+        *   directly use the value of the input parameter: `flowStore['inputParameters']['<input_parameter_name>'].value`
+        *   Example:using in node like Core:ApplyExpression for $Expression use : `flowStore['inputParameters']['input_string_1'].value`
+
+    *   Case 2 — In all other nodes, it's config key label is not $Expression
+        *   add prefix `$e:` to the value of the input parameter: `$e:flowStore['inputParameters']['<input_parameter_name>'].value`
+        *   Example: using in node like Core:Repeat for count, use : `$e:flowStore['inputParameters']['number_of_times'].value`
 
 """
 
@@ -535,6 +592,11 @@ if __name__ == "__main__":
     # Log that string. 
     # Then in a second Logic compute the length of that string; If length > 40 log 'Long summary' else log 'Short summary'. Both paths to End."""
 
+    # task="""create a flow that fetches a joke from chuck norris api and then logs only the joke by .value
+    # if the joke content is NSFW, then log 'Joke is NSFW: <joke>' otherwise log 'Joke is not NSFW: <joke>'
+    # use proper logics and nlp to check if the joke is NSFW on its content
+    # """
+
     # task = "Create a flow that takes a user provided input string and then calculate its md5 and log this."  
     
     task="create a flow that fetches a joke from chuck norris api and then logs only the joke by .value"
@@ -546,30 +608,26 @@ if __name__ == "__main__":
     task="""create a flow that fetches a joke from chuck norris api and then logs only the joke by .value
     then compute the length of the joke and log this too.
     then check if the length is greater than 100, then log 'Joke is too long' otherwise log 'Joke is short'
-    do all this 10 times in a loop"""    
+    do all this 10 times in a loop"""
     task="""create a flow that fetches a joke from chuck norris api and then logs only the joke by .value
     then compute the length of the joke and log this too.
     then check if the length is greater than 100, then log 'Joke is too long' otherwise log 'Joke is short'
     do all this n times in a loop and this n should be a user provided input"""
 
-    task="""create a flow that fetches a joke from chuck norris api and then logs only the joke by .value
-    if the joke content is NSFW, then log 'Joke is NSFW: <joke>' otherwise log 'Joke is not NSFW: <joke>'
-    use proper logics and nlp to check if the joke is NSFW on its content
-    """
 
-    task="""create a flow that takes an excel file as input from user,
-    in this excel the second column contains 'description' of the product,
-    you need to Classify the product description into one of these categories:
-    - Electronics & Accessories
-    - Computer & Office Supplies
-    - Home & Kitchen
-    - Sports & Fitness
-    - Clothing & Footwear
-    - Toys & Kids Products
-    - Food & Beverages
-    - Personal Care & Lifestyle
-    then log the category of the each product description in a new column
-    """
+    # task="""create a flow that takes an excel file as input from user,
+    # in this excel the second column contains 'description' of the product,
+    # you need to Classify the product description into one of these categories:
+    # - Electronics & Accessories
+    # - Computer & Office Supplies
+    # - Home & Kitchen
+    # - Sports & Fitness
+    # - Clothing & Footwear
+    # - Toys & Kids Products
+    # - Food & Beverages
+    # - Personal Care & Lifestyle
+    # then log the category of the each product description in a new column
+    # """
 
 
 

@@ -107,7 +107,7 @@ def select_relevant_node_names(task: str, all_nodes: dict, model) -> list[str]:
     available = [n for n in all_nodes if n not in mandatory]
     if not available:
         return [n for n in mandatory if n in all_nodes]
-    print("*********available*********",available)
+    # print("*********available*********",available)
 
     # Build a short hint per node (group, action) for better selection
     hints = []
@@ -117,7 +117,7 @@ def select_relevant_node_names(task: str, all_nodes: dict, model) -> list[str]:
         action = defn.get("action", "")
         desc = defn.get("description", "")
         hint = name
-        print("*********name*********",name)
+        # print("*********name*********",name)
         if group or action:
             hint += f" (group={group}, action={action})"
         if isinstance(desc, str) and desc.strip():
@@ -125,21 +125,22 @@ def select_relevant_node_names(task: str, all_nodes: dict, model) -> list[str]:
             first_line = desc.strip().split("\n")[0].strip()
             hint += " " + (first_line[:200] + "..." if len(first_line) > 200 else first_line)
         hints.append(hint)
-        print("*********hint*********",hint)
+        # print("*********hint*********",hint)
     
 
     prompt = f"""You are a flow design assistant. Given the task below and the list of available nodes, output ONLY a comma-separated list of node names that are needed to implement this task. Do not include any explanation.
 
 Rules:
 - Always include Start and End.
-- Include Logic if the task needs custom code, expressions, or data transformation.
-- Include only nodes that are clearly relevant (e.g. HTTP request, Log, If, etc.).
+- Always include Logic if it appears in the catalog: Logic is the node for arbitrary Python/Groovy (including large end-to-end scripts, NLP, loops, merging data, validation). Use it whenever the task needs behavior that is not a single built-in node.
+- Include Logic especially when the user asks for "logic node", "custom code", "in Python", "transform", "filter", "analyze", or "write the whole code".
+- Include only other nodes that are clearly relevant (e.g. HTTP request, Log, If, etc.).
 
 Task:
 {task[:2000]}
 
 Available nodes (name and optional hint):
-{chr(10).join(hints[:200])}
+{chr(10).join(hints)}
 
 Reply with only the comma-separated node names, nothing else."""
 
@@ -200,7 +201,7 @@ Use these definitions to construct the `data` and `configData` for each node cor
     *   You can find these from the `inputs` and `outputs` sections of the "Available Node Definitions" YAML and put them into lists.    
     *   This field is REQUIRED. You MUST NOT omit it.
     *   If a node truly has no inputs or outputs in its definition, ONLY THEN use `[]`.
-    *   If the node is "Logic" node, then pay a close attention on the configurable additional sockets. and update them accordingly here. 
+    *   If the node is "Logic", set `configData.incomingSockets` and `configData.outgoingSockets` to match the script; mirror those names in `data.inputs` / `data.outputs` and edges (see Rule 10). 
 7.  **configData.label for every node**: Every node definition's `config` includes an item with `name: label` (display "Label"). You MUST set `node.data.configData.label` to a short, human-readable label for that node instance (e.g. "Start", "Log Joke", "HTTP Get Repo"). This field is REQUIRED for every node—do not omit it.
 
 8.  **Edge Handles**: For EVERY edge, you MUST populate `sourceHandle` and `targetHandle` using the format `{{SocketName}}#undefined{{source|target}}`.
@@ -218,13 +219,22 @@ Use these definitions to construct the `data` and `configData` for each node cor
         - Edge A->C: `"data": {{"order": 2}}`
     *   This is CRITICAL for parallel flows.
 
-10. **Code (Python or Groovy) in Logic Node**: 
-    *   If logic needs to be writte in python code, then use `in_sockets[<name_of_input_socket>]` to access the input socket and `out_sockets[<name_of_output_socket>]` to access the output socket.
-    *   But If logic needs to be writte in groovy code, then directly use name_of_input_sockets and name_of_output_sockets to access the input and output sockets.
-    *   Example python code: `#python\nout_sockets["out"]="hi "+in_sockets["inp"]`
-    *   Example groovy code: `out = "hi "+inp`
-    *   If an input socket receives a value from an output socket containing a JSON object, this value is already a Python dictionary. **Do NOT use `json.loads()`** on it—it does not need to be parsed again.
-        For example, if an HTTPRequest node returns a JSON object, you can access its fields directly using dot or dictionary notation (e.g., `response.key` or `response["key"]`) in the subsequent node's logic code.
+10. **Logic node — generalized (read carefully; most failures are here)**:
+    **Role**: Logic runs arbitrary scripts. Tasks differ widely (API shaping, scoring, multi-step transforms, loops). Put the **full behavior** in Logic when the user asks for custom Python or "whole working code"—do **not** replace with one-line placeholders or trivial keyword checks unless the user explicitly wants a stub.
+    **Flow shape**:
+    *   **Thin flow, fat Logic** is valid: Start → (optional HTTP / inputs) → **one Logic node with complete Python** → Log / End when most of the work is custom computation.
+    *   Use **multiple** Logic nodes only when the graph must branch or when distinct stages feed different downstream nodes—not to avoid writing a longer script.
+    **Socket contract (mandatory)**:
+    *   Set `configData.incomingSockets` to a comma-separated list of every input socket name the script reads (e.g. `response,payload`). Set `configData.outgoingSockets` for every output the script writes (e.g. `result,safe`). Match `node.data.inputs` / `node.data.outputs` lists and all edges to these names.
+    *   Python: first line of `configData.logic` must be `#python`. Use only `in_sockets["<name>"]` and `out_sockets["<name>"]` for those sockets.
+    *   Groovy: use the socket variable names directly for inputs/outputs (no `in_sockets` dict).
+    *   Example python (minimal): `#python\nout_sockets["out"]="hi "+str(in_sockets["inp"])`
+    *   Example groovy (minimal): `out = "hi "+inp`
+    **Large / end-to-end scripts**:
+    *   The `logic` string may be long (helpers, try/except, full pipelines). That is expected. must include **complete, runnable** logic—not comments like "placeholder for NLP".
+    **Data from upstream nodes**:
+    *   JSON from HTTP (or similar) is already a Python **dict** in Logic. **Do NOT use `json.loads()`** on it. Use `obj["key"]` or safe `.get()`.
+    **Runtime config**: use `inputParameters` and in Python `env['flowStore']['inputParameters']['<name>']['value']` when the user asks for user-provided keys or config (see rules 11–12).
 
 11. **configuration/creation of Input Parameters**:
     *   When in the task, user requests inputs that are provided at flow run time (e.g. taking input from user, user-provided config, API keys, or values to use in Logic), you MUST add an `inputParameters` object (parallel to `nodes` and `edges`).
@@ -256,7 +266,7 @@ def create_agent_for_task(task: str, nodes_json_path: str = "all_nodes_dynamical
     Load dynamic nodes, select those relevant to the task, build prompt, and return an Agent.
     """
     all_nodes = load_dynamic_node_definitions(nodes_json_path)
-    print("*********all_nodes*********",all_nodes)
+    # print("*********all_nodes*********",all_nodes)
     all_nodes = merge_basic_into_dynamic(all_nodes, basic_yaml_path)
     if not all_nodes:
         raise ValueError("No node definitions found. Check paths for JSON and basic YAML.")
@@ -264,7 +274,7 @@ def create_agent_for_task(task: str, nodes_json_path: str = "all_nodes_dynamical
     # Use same Ollama for selection (lighter call)
     ollama = Ollama(id=which_model, host="http://100.113.113.188:2802", options={"temperature": 0.0})
     selected_names = select_relevant_node_names(task, all_nodes, ollama)
-    print("*********selected_names*********",selected_names)
+    print("*********selected_names*********", selected_names)
     node_yaml = build_node_definitions_yaml(all_nodes, selected_names)
     print("*********node_yaml*********",node_yaml)
     system_prompt = get_system_prompt(node_yaml)
@@ -473,10 +483,10 @@ if __name__ == "__main__":
     # and then simply write the logic to get the length of the joke from the response json(use .value to get only the joke from the response json). 
     # and then if the length is greater than 100, then log 'Joke is too long' otherwise log 'Joke is short'.""" 
 
-    task = """Create a flow that fetches a joke from the Chuck Norris API. 
-    Use a Logic node to get the joke string from the response (use .value). 
-    Then use an If node: if the length of the joke is greater than 80, log 'Long joke' and send to End; 
-    otherwise log 'Short joke' and send to End. Both branches must reach the End node."""
+    # task = """Create a flow that fetches a joke from the Chuck Norris API. 
+    # Use a Logic node to get the joke string from the response (use .value). 
+    # Then use an If node: if the length of the joke is greater than 80, log 'Long joke' and send to End; 
+    # otherwise log 'Short joke' and send to End. Both branches must reach the End node."""
 
     # task=""" 
     # create a flow that fatches a joke from the chuck norris api 
@@ -519,13 +529,49 @@ if __name__ == "__main__":
     # Log that string. 
     # Then an If node: if the combined string length > 50 log 'Long titles' else log 'Short titles'. Both to End."""
 
-    task = """Create a flow that GETs https://api.github.com/repos/python/cpython. 
-    In Logic extract : full_name, stargazers_count, and default_branch. 
-    Format one string 'Repo: <full_name>, Stars: <stargazers_count>, Branch: <default_branch>' and output it. 
-    Log that string. 
-    Then in a second Logic compute the length of that string; If length > 40 log 'Long summary' else log 'Short summary'. Both paths to End."""
+    # task = """Create a flow that GETs https://api.github.com/repos/python/cpython. 
+    # In Logic extract : full_name, stargazers_count, and default_branch. 
+    # Format one string 'Repo: <full_name>, Stars: <stargazers_count>, Branch: <default_branch>' and output it. 
+    # Log that string. 
+    # Then in a second Logic compute the length of that string; If length > 40 log 'Long summary' else log 'Short summary'. Both paths to End."""
 
     # task = "Create a flow that takes a user provided input string and then calculate its md5 and log this."  
+    
+    task="create a flow that fetches a joke from chuck norris api and then logs only the joke by .value"
+    task="""create a flow that fetches a joke from chuck norris api and then logs only the joke by .value
+    do this 10 times in a loop"""
+    task="""create a flow that fetches a joke from chuck norris api and then logs only the joke by .value
+    then compute the length of the joke and log this too. 
+    do all this 10 times in a loop"""
+    task="""create a flow that fetches a joke from chuck norris api and then logs only the joke by .value
+    then compute the length of the joke and log this too.
+    then check if the length is greater than 100, then log 'Joke is too long' otherwise log 'Joke is short'
+    do all this 10 times in a loop"""    
+    task="""create a flow that fetches a joke from chuck norris api and then logs only the joke by .value
+    then compute the length of the joke and log this too.
+    then check if the length is greater than 100, then log 'Joke is too long' otherwise log 'Joke is short'
+    do all this n times in a loop and this n should be a user provided input"""
+
+    task="""create a flow that fetches a joke from chuck norris api and then logs only the joke by .value
+    if the joke content is NSFW, then log 'Joke is NSFW: <joke>' otherwise log 'Joke is not NSFW: <joke>'
+    use proper logics and nlp to check if the joke is NSFW on its content
+    """
+
+    task="""create a flow that takes an excel file as input from user,
+    in this excel the second column contains 'description' of the product,
+    you need to Classify the product description into one of these categories:
+    - Electronics & Accessories
+    - Computer & Office Supplies
+    - Home & Kitchen
+    - Sports & Fitness
+    - Clothing & Footwear
+    - Toys & Kids Products
+    - Food & Beverages
+    - Personal Care & Lifestyle
+    then log the category of the each product description in a new column
+    """
+
+
 
 
     if len(sys.argv) > 1:
@@ -538,7 +584,7 @@ if __name__ == "__main__":
         response = agent.run(task)
         flow_data = response.content
         
-        print(f"Flow Data Type: {type(flow_data)}")
+        # print(f"Flow Data Type: {type(flow_data)}")
         
         base_dict = None
         
